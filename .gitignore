@@ -1,3 +1,4 @@
 *.conf
-!*.sql
 .vscode
+!*.sql
+!postgrest.conf

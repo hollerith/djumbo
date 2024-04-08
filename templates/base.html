@@ -1,0 +1,43 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <meta name="htmx-config" content='{"defaultSwapStyle":"outerHTML"}'>
+
+    <title>dJUMbo</title>
+    <script src="https://unpkg.com/htmx.org@1.9.10" integrity="sha384-D1Kt99CQMDuVetoL1lrYwg5t+9QdHe7NLX/SoJYkXDFfX37iInKRy5xLSi8nO7UC" crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.10/dist/ext/response-targets.js"></script>
+    <script src="https://unpkg.com/htmx.org/dist/ext/remove-me.js"></script>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio,line-clamp"></script>
+</head>
+<body class="bg-gray-800">
+    <div class="flex">
+        <!-- Sidebar for desktop -->
+        {% block westside %}
+        <div class="hidden lg:block bg-black h-screen w-64">
+            <h5 class="mb-3 text-2xl font-bold tracking-tight text-blue-100 p-6">Admin</h5>
+            <ul class="p-6">
+                <li><a href="?list=couriers&page=1" class="text-blue-300 hover:text-blue-500 block">Couriers</a></li>
+                <li><a href="?list=channels&page=1" class="text-blue-300 hover:text-blue-500 block">Channels</a></li>
+                <li><a href="?list=shipments&page=1" class="text-blue-300 hover:text-blue-500 block">Shipments</a></li>
+                <li><a href="?list=orders&page=1" class="text-blue-300 hover:text-blue-500 block">Orders</a></li>
+                <li><a href="?list=merchants&page=1" class="text-blue-300 hover:text-blue-500 block">Merchants</a></li>
+                <li><a href="?list=ticker&page=1" class="text-blue-300 hover:text-blue-500 block">Ticker</a></li>
+                <li><a href="?list=todos&page=1" class="text-blue-300 hover:text-blue-500 block">Todos</a></li>
+            </ul>
+        </div>
+        {% endblock %}
+        <!-- Main content area -->
+        <div class="mt-5 p-6 w-full">
+            {% block content %}
+
+            {% endblock %}
+        </div>
+        <!-- Right sidebar for desktop -->
+        {% block eastside %}
+        {% endblock %}
+    </div>
+</body>
+</html>

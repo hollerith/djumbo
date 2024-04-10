@@ -1,3 +1,7 @@
+create domain "text/html" as text;
+
+create extension plpython3u;
+
 -- djumbo render jinja2
 create or replace function api.render(template_name text, context json)
 returns "text/html" language plpython3u as $$
@@ -40,7 +44,8 @@ begin
 end;
 $$;
 
-SELECT api.render('welcome.html', '{"name": "John", "email": "john@example.com"}'::json) AS rendered_html;
+SELECT api.render('welcome.html', '{"user_email": "john@example.com"}'::json) AS rendered_html;
+
 
 -- GET register
 create or replace function api.register()
@@ -89,10 +94,26 @@ begin
     select auth.login(_email, _password) into jwt_token;
 
     perform set_config('response.headers',
-       '[{"Set-Cookie": "auth=' || jwt_token || '; HttpOnly; Path=/; SameSite=Lax"},' ||
-       ' {"Authorization": "Bearer ' || jwt_token || '"},' ||
-       ' {"HX-Redirect": "/rpc/welcome"}]', true);
+      '[{"Set-Cookie": "auth=' || jwt_token || '; HttpOnly; Path=/; SameSite=Lax"},' ||
+      ' {"Authorization": "Bearer ' || jwt_token || '"},' ||
+      ' {"HX-Redirect": "/rpc/welcome"}]', true);
 
     return json_build_object('auth', jwt_token);
 end;
 $$ security definer;
+
+-- Debugging function to print the result of the sign function
+create or replace function api.debug()
+returns text language plpgsql as $$
+declare
+    info text;
+begin
+    select current_user
+        || ' '
+        || current_setting('app.jwt_secret')
+        || ' '
+        || sign('{"email": "admin@nowhere.com", "role": "web_user", "exp": 1712718168}', 'X8uTPczUMpS2sAm3zG30HHMkOZEXUpdV')
+      into info;
+    return info;
+end;
+$$;

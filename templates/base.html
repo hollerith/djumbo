@@ -19,6 +19,13 @@
         <div class="hidden lg:block bg-black h-screen w-64">
             <h5 class="mb-3 text-2xl font-bold tracking-tight text-blue-100 p-6">Admin</h5>
             <ul class="p-6">
+                <li><a href="https://postgrest.org/en/v12/tutorials/tut0.html" class="text-blue-300 hover:text-blue-500 block">PostgREST</a></li>
+                <li><a href="/rpc/index" class="text-blue-300 hover:text-blue-500 block">Home</a></li>
+                <li><a href="/rpc/login" class="text-blue-300 hover:text-blue-500 block">Login</a></li>
+                <li><a href="/rpc/welcome" class="text-blue-300 hover:text-blue-500 block">Welcome</a></li>
+                <li><a href="/rpc/debug" class="text-blue-300 hover:text-blue-500 block">Debug</a></li>
+            </ul>
+            <ul class="p-6">
                 <li><a href="?list=couriers&page=1" class="text-blue-300 hover:text-blue-500 block">Couriers</a></li>
                 <li><a href="?list=channels&page=1" class="text-blue-300 hover:text-blue-500 block">Channels</a></li>
                 <li><a href="?list=shipments&page=1" class="text-blue-300 hover:text-blue-500 block">Shipments</a></li>
@@ -26,11 +33,6 @@
                 <li><a href="?list=merchants&page=1" class="text-blue-300 hover:text-blue-500 block">Merchants</a></li>
                 <li><a href="?list=ticker&page=1" class="text-blue-300 hover:text-blue-500 block">Ticker</a></li>
                 <li><a href="?list=todos&page=1" class="text-blue-300 hover:text-blue-500 block">Todos</a></li>
-            </ul>
-            <ul class="p-6">
-                <li><a href="/rpc/index" class="text-blue-300 hover:text-blue-500 block">Home</a></li>
-                <li><a href="/rpc/login" class="text-blue-300 hover:text-blue-500 block">Login</a></li>
-                <li><a href="/rpc" class="text-blue-300 hover:text-blue-500 block">Logout</a></li>
             </ul>
         </div>
         {% endblock %}

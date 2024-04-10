@@ -7,10 +7,6 @@ grant usage on schema auth to web_anon;
 create role authenticator noinherit login password 'mysecretpassword';
 grant web_anon to authenticator;
 
-create domain "text/html" as text;
-
-create extension plpython3u;
-
 -- create roles
 create role web_anon nologin;
 create role web_user nologin;
@@ -56,22 +52,6 @@ begin
 end;
 $$ language plpgsql;
 
--- sign the token
-create or replace function sign(payload json, secret text)
-returns text as $$
-declare
-  header text := encode(convert_to('{"alg": "HS256","typ": "JWT"}', 'utf8'), 'base64');
-  payload_encoded text := encode(convert_to(payload::text, 'utf8'), 'base64');
-  signature text;
-begin
-  header := replace(replace(header, '+', '-'), '/', '_');
-  payload_encoded := replace(replace(payload_encoded, '+', '-'), '/', '_');
-  signature := encode(hmac(header || '.' || payload_encoded, secret, 'sha256'), 'base64');
-  signature := replace(replace(rtrim(signature, '='), '+', '-'), '/', '_');
-  return header || '.' || payload_encoded || '.' || signature;
-end;
-$$ language plpgsql volatile security definer;
-
 -- trigger for encrypting passwords
 create trigger encrypt_pass before insert or update on auth.users
 for each row execute procedure auth.encrypt_pass();
@@ -80,6 +60,47 @@ alter database postgres set app.jwt_secret to 'mustbeatleastthirtytwocharacters'
 
 select pg_reload_conf();
 show app.jwt_secret;
+
+-- sign the token
+create or replace function sign(payload json, secret text)
+returns text as $$
+declare
+    header text;
+    payload_encoded text;
+    signature text;
+begin
+    header := encode(convert_to('{"alg": "HS256","typ": "JWT"}', 'utf8'), 'base64');
+    header := replace(replace(rtrim(header, '='), '+', '-'), '/', '_');
+
+    payload_encoded := encode(convert_to(payload::text, 'utf8'), 'base64');
+    payload_encoded := replace(replace(rtrim(payload_encoded, '='), '+', '-'), '/', '_');
+    payload_encoded := replace(payload_encoded, E'\n', '');
+
+    signature := encode(hmac(header || '.' || payload_encoded, secret, 'sha256'), 'base64');
+    signature := replace(replace(rtrim(signature, '='), '+', '-'), '/', '_');
+
+    return header || '.' || payload_encoded || '.' || signature;
+end;
+$$ language plpgsql volatile security definer;
+
+-- function for user login, returning a jwt token
+create or replace function auth.login(_email text, _pass text)
+returns text language plpgsql security definer as $$
+declare
+ user_record auth.users%rowtype;
+
+begin
+    select * into user_record from auth.users where email = _email and pass = crypt(_pass, pass);
+    if found then
+        return sign(
+            row_to_json((select r from (select user_record.email, user_record.role, extract(epoch from now())::integer + 3600 as exp) r)),
+            current_setting('app.jwt_secret')
+        );
+    else
+        raise exception 'Invalid credentials';
+    end if;
+end;
+$$;
 
 -- function for user registration
 create or replace function auth.register(_email text, _password text)
@@ -95,21 +116,6 @@ exception when unique_violation then
     return 'Email already registered.';
 end;
 $$ language plpgsql;
-
--- function for user login, returning a jwt token
-create or replace function auth.login(_email text, _pass text)
-returns text language plpgsql security definer as $$
-begin
-  if exists (select 1 from auth.users where email = _email and pass = crypt(_pass, pass)) then
-    return sign(
-      row_to_json((select r from (select _email as email, extract(epoch from now())::integer + 3600 as exp) r)),
-      current_setting('app.jwt_secret')
-    );
-  else
-    raise exception 'Invalid credentials';
-  end if;
-end;
-$$;
 
 -- grant execution permissions to web_anon role
 grant execute on function auth.register(text, text) to web_anon;

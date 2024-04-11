@@ -6,7 +6,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-RUN pip3 install --break-system-packages requests Jinja2 bottle
+RUN pip3 install --break-system-packages requests Jinja2 
 
 EXPOSE 5432
 CMD ["postgres"]

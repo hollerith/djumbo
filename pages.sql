@@ -29,32 +29,46 @@ begin
 end;
 $$;
 
+
 -- GET welcome
 create or replace function api.welcome()
 returns "text/html" language plpgsql as $$
 declare
     context json;
-    session_token text;
+    activity json;
+    user_tables json;
 begin
+    -- Gather selected activity information
+    select json_agg(row_to_json(t)) into activity
+    from (
+        select datid, datname, pid, usesysid, usename, application_name, client_addr, client_hostname
+        from pg_stat_activity
+    ) t;
 
-    -- Prepare the context as a JSON object
+    -- Gather selected user tables information, excluding n_tup* columns
+    select json_agg(row_to_json(t)) into user_tables
+    from (
+        select schemaname, relname, seq_scan, idx_scan, idx_tup_fetch, last_vacuum, last_autovacuum, last_analyze, last_autoanalyze
+        from pg_stat_user_tables
+    ) t;
+
     context := json_build_object(
-        'user_email', current_setting('request.jwt.claims', true)::json->>'email',
         'current_user', current_user,
-        'current_timestamp', current_timestamp,
-        'session_token', session_token
+        'current_database', current_database(),
+        'current_schema', current_schema(),
+        'activity', activity,
+        'user_tables', user_tables
     );
 
-    -- Directly return the result of api.render
-    return api.render('welcome.html', context);
+    return api.render('welcome.html', context::json);
 end;
 $$;
+
 
 -- GET register
 create or replace function api.register()
 returns "text/html" language plpgsql as $$
 begin
-    -- Call api.render with 'register.html' and an empty JSON object for context
     return api.render('register.html', '{}'::json);
 end;
 $$;
@@ -90,7 +104,10 @@ $$;
 create or replace function api.login(_email text, _password text)
 returns json language plpgsql as $$
 declare
-    token text;
+    token    text;
+    cookie   text;
+    redirect text;
+    headers  text;
 begin
     select auth.create_session(_email, _password) into token;
 
@@ -99,14 +116,15 @@ begin
             using detail = 'invalid credentials';
     end if;
 
-    perform set_config('response.headers',
-      '[{"Set-Cookie": "session_token=' || token ||
-      '; HttpOnly; Path=/; SameSite=Lax"},' ||
-      ' {"HX-Redirect": "/rpc/welcome"}]', true);
+    cookie := format('{"Set-Cookie": "session_token=%s; HttpOnly; Path=/; SameSite=Lax"}', token);
+    redirect := '{"HX-Redirect": "/rpc/welcome"}';
+    headers := format('[%s, %s]', cookie, redirect);
+    perform set_config('response.headers', headers, true);
 
     return json_build_object('auth', token);
 end;
 $$ security definer;
+
 
 -- GET logout
 create or replace function api.logout() returns void as $$
@@ -123,15 +141,20 @@ grant execute on function api.logout to web_user;
 
 -- Debugging function to print the result of the sign function
 create or replace function api.debug() returns text as $$
-declare
-    info text;
 begin
-    select current_user
-        || ' '
-        || current_setting('app.jwt_secret')
-        || ' '
-        || sign('{"email": "admin@nowhere.com", "role": "web_user", "exp": 1712718168}', 'X8uTPczUMpS2sAm3zG30HHMkOZEXUpdV')
-      into info;
-    return info;
+    return current_user;
 end;
 $$ language plpgsql;
+
+grant execute on function api.render(text, json) to web_anon, web_user;
+
+grant execute on function api.index() to web_anon, web_user;
+grant execute on function api.register() to web_anon;
+grant execute on function api.register(text, text) to web_anon;
+grant execute on function api.login() to web_anon;
+grant execute on function api.login(text, text) to web_anon;
+grant execute on function api.logout() to web_user;
+grant execute on function api.welcome() to web_user;
+
+
+

@@ -1,10 +1,60 @@
 {% extends 'base.html' %}
 
 {% block content %}
-  <div class="flex justify-center">
-    <div class="max-w-lg mt-5 p-6 bg-gray-100 border border-gray-800 rounded-lg shadow-xl">
-      <h5 class="mb-3 text-2xl font-bold tracking-tight">Welcome {{ current_user }}!</h5>
-      Cookie: {{ session_token }}
+<div class="p-8 bg-gray-100 text-gray-900 rounded-lg shadow">
+    <h1 class="text-2xl font-bold mb-6">Server Dashboard</h1>
+
+    <div class="mb-8">
+        <h2 class="text-xl font-semibold mb-4">General Information</h2>
+        <ul class="list-disc pl-8">
+            <li>Current User: <span class="font-medium">{{ current_user }}</span></li>
+            <li>Current Database: <span class="font-medium">{{ current_database }}</span></li>
+            <li>Current Schema: <span class="font-medium">{{ current_schema }}</span></li>
+        </ul>
     </div>
-  </div>
+
+    <div class="mb-8">
+        <h2 class="text-xl font-semibold mb-4">Activity</h2>
+        <table class="min-w-full table-auto border-collapse border border-gray-200">
+            <thead class="bg-gray-200">
+                <tr>
+                    {% for key in activity[0].keys() %}
+                        <th class="border border-gray-200 px-4 py-2 text-left">{{ key }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in activity %}
+                    <tr class="odd:bg-blue-100 even:bg-yellow-50">
+                        {% for value in item.values() %}
+                            <td class="border border-gray-200 px-4 py-2 text-left">{{ value }}</td>
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="mb-8">
+        <h2 class="text-xl font-semibold mb-4">User Tables</h2>
+        <table class="min-w-full table-auto border-collapse border border-gray-200">
+            <thead class="bg-gray-200">
+                <tr>
+                    {% for key in user_tables[0].keys() %}
+                        <th class="border border-gray-200 px-4 py-2 text-left">{{ key }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in user_tables %}
+                    <tr class="odd:bg-blue-100 even:bg-yellow-50">
+                        {% for value in item.values() %}
+                            <td class="border border-gray-200 px-4 py-2 text-left">{{ value }}</td>
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
 {% endblock %}

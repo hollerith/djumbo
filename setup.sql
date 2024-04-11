@@ -2,9 +2,8 @@
 create extension if not exists pgcrypto;
 create extension if not exists citext;
 
-create schema api;
-
 -- create roles
+create role api nologin;
 create role web_anon nologin;
 create role web_user nologin;
 
@@ -13,6 +12,9 @@ create role authenticator noinherit login password 'mysecretpassword';
 -- grant web_user role to the authenticator role to allow role switching
 grant web_anon to authenticator;
 grant web_user to authenticator;
+
+-- create or ensure the 'api' schema exists
+create schema authorization api;
 
 -- create or ensure the 'auth' schema exists
 create schema if not exists auth;
@@ -33,6 +35,9 @@ create table if not exists auth.sessions (
     expires timestamptz not null default current_timestamp + interval '15min'
 );
 
+alter default privileges revoke execute on functions from public;
+alter default privileges for role api revoke execute on functions from public;
+
 grant usage on schema api to web_anon, web_user;
 grant usage on schema auth to web_anon, web_user;
 
@@ -49,53 +54,6 @@ $$ language plpgsql;
 -- trigger for encrypting passwords
 create trigger encrypt_pass before insert or update on auth.users
 for each row execute procedure auth.encrypt_pass();
-
-alter database postgres set app.jwt_secret to 'mustbeatleastthirtytwocharacters';
-alter database postgres set app.jwt_secret to 'X8uTPczUMpS2sAm3zG30HHMkOZEXUpdV';
-
--- sign the token
-create or replace function sign(payload json, secret text) returns text as $$
-declare
-    header text;
-    payload_encoded text;
-    signature text;
-begin
-    header := encode(convert_to('{"alg": "HS256","typ": "JWT"}', 'utf8'), 'base64');
-    header := replace(replace(rtrim(header, '='), '+', '-'), '/', '_');
-
-    payload_encoded := encode(convert_to(payload::text, 'utf8'), 'base64');
-    payload_encoded := replace(replace(rtrim(payload_encoded, '='), '+', '-'), '/', '_');
-    payload_encoded := replace(payload_encoded, E'\n', '');
-
-    signature := encode(hmac(header || '.' || payload_encoded, secret, 'sha256'), 'base64');
-    signature := replace(replace(rtrim(signature, '='), '+', '-'), '/', '_');
-
-    return header || '.' || payload_encoded || '.' || signature;
-end;
-$$ language plpgsql volatile security definer;
-
--- function for user login, returning a jwt token
-create or replace function auth.get_jwt_token(_email text, _pass text) returns text as $$
-declare
-    user_record auth.users%rowtype;
-
-begin
-    select * into user_record from auth.users where email = _email and pass = crypt(_pass, pass);
-    if found then
-        return sign(
-            row_to_json(
-                (select r
-                   from (select user_record.email,
-                                user_record.role,
-                                extract(epoch from now())::integer + 3600 as exp) r)
-            ),
-            current_setting('app.jwt_secret')
-        );
-    else
-        raise exception 'Invalid credentials';
-    end if;
-end;
-$$ language plpgsql security definer;
 
 -- function for user registration
 create or replace function auth.register(_email text, _pass text) returns text as $$
@@ -114,12 +72,6 @@ exception when unique_violation then
     return 'Email already registered.';
 end;
 $$ language plpgsql security definer;
-
--- grant execution permissions to web_anon role
-grant execute on function auth.register(text, text) to web_anon;
-grant execute on function auth.get_jwt_token(text, text) to web_anon;
-
--- Session Management alternative
 
 -- Function to create a new session
 create or replace function auth.create_session(_email text, _pass text)
@@ -147,6 +99,7 @@ begin
 end;
 $$ language plpgsql security definer;
 
+
 -- Function to expire a session (logout)
 create or replace function auth.expire_session(_token text) returns void as $$
 begin
@@ -155,11 +108,6 @@ begin
     where token = expire_session._token;
 end;
 $$ language plpgsql security definer;
-
--- grant necessary permissions
-grant execute on function auth.create_session(text, text) to web_anon;
-grant execute on function auth.refresh_session(text) to web_user;
-grant execute on function auth.expire_session(text) to web_user;
 
 -- Function to authenticate based on session token
 create or replace function auth.authenticate() returns text as $$
@@ -189,4 +137,13 @@ begin
 end;
 $$ language plpgsql;
 
-grant execute on function auth.authenticate to web_anon;
+-- grant necessary permissions
+grant execute on function auth.register(text, text) to web_anon;
+grant execute on function auth.create_session(text, text) to web_anon;
+grant execute on function auth.refresh_session(text) to web_user;
+grant execute on function auth.expire_session(text) to web_user;
+grant execute on function auth.authenticate() to web_anon, web_user;
+
+grant select, insert on auth.sessions to web_anon;
+grant select, update on auth.sessions to web_user;
+

@@ -1,4 +1,7 @@
-*.conf
+*
 .vscode
-!*.sql
+!**/*.sql
+!**/*.html
+!**/*.css
+!**/*.png
 !postgrest.conf

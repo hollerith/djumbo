@@ -25,27 +25,30 @@ begin
         'title', 'jinja2 djumbo',
         'headline', 'Welcome to Djumbo 0.01'
     );
-    return api.render('index.html', context::text);
+    return api.render('index.html', context::json);
 end;
 $$;
-
 
 -- GET welcome
 create or replace function api.welcome()
 returns "text/html" language plpgsql as $$
 declare
     context json;
+    session_token text;
 begin
+
     -- Prepare the context as a JSON object
-    context := json_build_object('user_email', current_setting('request.jwt.claims', true)::json->>'email');
+    context := json_build_object(
+        'user_email', current_setting('request.jwt.claims', true)::json->>'email',
+        'current_user', current_user,
+        'current_timestamp', current_timestamp,
+        'session_token', session_token
+    );
 
     -- Directly return the result of api.render
     return api.render('welcome.html', context);
 end;
 $$;
-
-SELECT api.render('welcome.html', '{"user_email": "john@example.com"}'::json) AS rendered_html;
-
 
 -- GET register
 create or replace function api.register()
@@ -65,7 +68,7 @@ begin
     select auth.register(_email, _password) into result;
 
     if result = 'Registration successful.' then
-        perform set_config('response.headers', '["HX-Redirect: /rpc/login"]', false);
+        perform set_config('response.headers', '[{"HX-Redirect": "/rpc/login"}]', false);
     end if;
 
     return result;
@@ -83,28 +86,43 @@ begin
 end;
 $$;
 
-select api.login('admin@nowhere.com', 'P455w0rd!')
-
 -- POST login
 create or replace function api.login(_email text, _password text)
 returns json language plpgsql as $$
 declare
-    jwt_token text;
+    token text;
 begin
-    select auth.login(_email, _password) into jwt_token;
+    select auth.create_session(_email, _password) into token;
+
+    if token is null then
+        raise insufficient_privilege
+            using detail = 'invalid credentials';
+    end if;
 
     perform set_config('response.headers',
-      '[{"Set-Cookie": "auth=' || jwt_token || '; HttpOnly; Path=/; SameSite=Lax"},' ||
-      ' {"Authorization": "Bearer ' || jwt_token || '"},' ||
+      '[{"Set-Cookie": "session_token=' || token ||
+      '; HttpOnly; Path=/; SameSite=Lax"},' ||
       ' {"HX-Redirect": "/rpc/welcome"}]', true);
 
-    return json_build_object('auth', jwt_token);
+    return json_build_object('auth', token);
 end;
 $$ security definer;
 
+-- GET logout
+create or replace function api.logout() returns void as $$
+    begin
+        perform auth.expire_session(
+            current_setting('request.cookie.session_token', true)
+        );
+
+        perform set_config('response.headers', '[{"Set-Cookie": "session_token=; Path=/"}, {"HX-Redirect": "/rpc/index"}]', true);
+    end;
+$$ language plpgsql;
+
+grant execute on function api.logout to web_user;
+
 -- Debugging function to print the result of the sign function
-create or replace function api.debug()
-returns text language plpgsql as $$
+create or replace function api.debug() returns text as $$
 declare
     info text;
 begin
@@ -116,4 +134,4 @@ begin
       into info;
     return info;
 end;
-$$;
+$$ language plpgsql;

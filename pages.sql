@@ -37,6 +37,7 @@ declare
     context json;
     activity json;
     user_tables json;
+    user_session_info json;
 begin
     -- Gather selected activity information
     select json_agg(row_to_json(t)) into activity
@@ -52,12 +53,16 @@ begin
         from pg_stat_user_tables
     ) t;
 
+    -- Fetch the user session information using the auth.authenticate() function
+    select auth.authenticate() into user_session_info;
+
     context := json_build_object(
         'current_user', current_user,
         'current_database', current_database(),
         'current_schema', current_schema(),
         'activity', activity,
-        'user_tables', user_tables
+        'user_tables', user_tables,
+        'user_session_info', user_session_info
     );
 
     return api.render('welcome.html', context::json);
@@ -155,6 +160,3 @@ grant execute on function api.login() to web_anon;
 grant execute on function api.login(text, text) to web_anon;
 grant execute on function api.logout() to web_user;
 grant execute on function api.welcome() to web_user;
-
-
-

@@ -109,31 +109,34 @@ begin
 end;
 $$ language plpgsql security definer;
 
--- Function to authenticate based on session token
-create or replace function auth.authenticate() returns text as $$
+grant select on auth.users to web_anon, web_user;
+
+-- Function to authenticate based on session token and return user record
+create or replace function auth.authenticate() returns json as $$
 declare
     session_token text;
-    session_user_id int;
+    user_record json;
 begin
     -- Get the session_token from the cookies
     select current_setting('request.cookies', true)::json->>'session_token'
         into session_token;
 
-    -- Proceed with the existing logic to validate the session token and set the user role
-    select user_id
-        into session_user_id
-        from auth.sessions
-        where token = session_token and expires > current_timestamp;
+    -- Directly join auth.sessions with auth.users and select the user record into JSON
+    select row_to_json(u) into user_record
+    from auth.sessions s
+    join auth.users u on s.user_id = u.user_id
+    where s.token = session_token and s.expires > current_timestamp;
 
-    if session_user_id is not null then
+    -- If a user record is found, set the local role to web_user and configure the user ID
+    if user_record is not null then
         set local role to web_user;
-        perform set_config('auth.user_id', session_user_id::text, true);
+        perform set_config('auth.user_id', (user_record->>'user_id')::text, true);
     else
         set local role to web_anon;
         perform set_config('auth.user_id', '', true);
     end if;
 
-    return session_token;
+    return user_record;
 end;
 $$ language plpgsql;
 

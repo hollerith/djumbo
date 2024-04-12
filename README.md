@@ -76,5 +76,5 @@ Djumbo is open-source software licensed under the MIT License. See the [LICENSE]
 
 ## Notes
 
-1. [^1]: https://boringtechnology.club
-2. [^2]: https://www.radicalsimpli.city
+[^1]: https://boringtechnology.club
+[^2]: https://www.radicalsimpli.city

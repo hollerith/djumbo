@@ -1,5 +1,6 @@
 *
 .vscode
+!**/*.md
 !**/*.sql
 !**/*.html
 !**/*.css

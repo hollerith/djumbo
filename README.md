@@ -1,12 +1,14 @@
 # Djumbo
 
-![Djumbo Logo](static/djumbo_512.png)
+<div align="center">
+    <img src="static/djumbo_512.png" alt="Djumbo Logo" width="256">
+</div>
 
 ## Description
 
 Djumbo is a powerful and flexible web application framework built on top of PostgreSQL, designed to streamline the development of dynamic web applications. It leverages the power of PostgreSQL's advanced features, such as JSONB support, PL/pgSQL functions, and triggers, to provide a seamless backend experience. Djumbo aims to simplify the development process by offering a structured approach to building web applications, with a focus on security, performance, and ease of use.
 
-LMAO. Work in progress, proof of concept, YMMV. 
+LMAO. Work in progress, proof of concept, YMMV.
 
 ## Features
 

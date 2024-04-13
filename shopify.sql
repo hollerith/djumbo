@@ -1,16 +1,11 @@
-create extension if not exists plpython3u;
-
 create schema if not exists shopify;
-create domain "text/html" as text;
-
 
 create table shopify.shop (
     shop text primary key,
     access_token text
 );
 
-
-create or replace function api.auth(_hmac text, _host text, _shop text, _timestamp text)
+create or replace function api.shopify_auth(_hmac text, _host text, _shop text, _timestamp text)
 returns "text/html" as $$
 import requests
 import hmac
@@ -35,7 +30,7 @@ auth_url = f"https://{_shop}/admin/oauth/authorize?client_id={client_id}&scope={
 return f"<html><body><script>window.location.href='{auth_url}';</script></body></html>"
 $$ language plpython3u;
 
-create or replace function api.callback(_shop text, _code text)
+create or replace function api.shopify_callback(_shop text, _code text)
 returns "text/html" as $$
 import requests
 import plpy
@@ -59,3 +54,4 @@ if response.status_code == 200:
 else:
     return f"<html><body><script>window.location.href='/rpc/error';</script></body></html>"
 $$ language plpython3u;
+

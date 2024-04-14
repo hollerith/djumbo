@@ -39,26 +39,26 @@ begin
     case code
         when 404 then
             context := json_build_object(
-                'title', 'page not found',
-                'message', 'the page you are looking for might have been removed, had its name changed, or is temporarily unavailable.',
+                'title', 'Page not found',
+                'message', 'The page you are looking for is temporarily unavailable.',
                 'code', code
             );
         when 400 then
             context := json_build_object(
-                'title', 'bad request',
-                'message', 'your browser sent a request that this server could not understand.',
+                'title', 'Bad request',
+                'message', 'Your browser sent a request that this server could not understand.',
                 'code', code
             );
-        when 401 then
+        when 500 then
             context := json_build_object(
-                'title', 'unauthorized',
-                'message', 'you do not have permission to view this directory or page using the credentials that you supplied.',
+                'title', 'Server fault',
+                'message', 'An internal server error occurred.',
                 'code', code
             );
         else
             context := json_build_object(
-                'title', 'error',
-                'message', 'an unexpected error has occurred.',
+                'title', 'Unexpected error',
+                'message', 'An unexpected error, probably DNS, has occurred.',
                 'code', code
             );
     end case;
@@ -139,11 +139,19 @@ create or replace function api.login()
 returns "text/html" language plpgsql as $$
 declare
     context json;
+    redirect text := current_setting('request.header.x-original-status', true);
 begin
-    context := json_build_object('user_email', current_setting('request.jwt.claims', true)::json->>'email');
+    context := json_build_object();
+
+    if redirect = '401' or redirect = '403' then
+        context := jsonb_set(context, '{banner}', 'Your session expired. Please login again.');
+        context := jsonb_set(context, '{title}', 'Session Expired');
+    end if;
+
     return api.render('login.html', context);
 end;
 $$;
+
 
 -- POST login
 create or replace function api.login(_email text, _password text)

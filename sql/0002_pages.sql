@@ -2,6 +2,7 @@ create domain "text/html" as text;
 
 create extension plpython3u;
 
+
 -- djumbo render jinja2
 create or replace function api.render(template_name text, context json)
 returns "text/html" language plpython3u as $$
@@ -14,6 +15,7 @@ template = jinja_env.get_template(template_name)
 html_content = template.render(json.loads(context))
 return html_content
 $$;
+
 
 -- GET index
 create or replace function api.index()
@@ -28,6 +30,43 @@ begin
     return api.render('index.html', context::json);
 end;
 $$;
+
+create or replace function api.error(code integer default 404)
+returns "text/html" language plpgsql as $$
+declare
+    context json;
+begin
+    case code
+        when 404 then
+            context := json_build_object(
+                'title', 'page not found',
+                'message', 'the page you are looking for might have been removed, had its name changed, or is temporarily unavailable.',
+                'code', code
+            );
+        when 400 then
+            context := json_build_object(
+                'title', 'bad request',
+                'message', 'your browser sent a request that this server could not understand.',
+                'code', code
+            );
+        when 401 then
+            context := json_build_object(
+                'title', 'unauthorized',
+                'message', 'you do not have permission to view this directory or page using the credentials that you supplied.',
+                'code', code
+            );
+        else
+            context := json_build_object(
+                'title', 'error',
+                'message', 'an unexpected error has occurred.',
+                'code', code
+            );
+    end case;
+
+    return api.render('error.html', context);
+end;
+$$;
+
 
 
 -- GET welcome
@@ -87,12 +126,13 @@ begin
     select auth.register(_email, _password) into result;
 
     if result = 'Registration successful.' then
-        perform set_config('response.headers', '[{"HX-Redirect": "/rpc/login"}]', false);
+        perform set_config('response.headers', '[{"HX-Redirect": "/login"}]', false);
     end if;
 
     return result;
 end;
 $$ security definer;
+
 
 -- GET login
 create or replace function api.login()
@@ -122,7 +162,7 @@ begin
     end if;
 
     cookie := format('{"Set-Cookie": "session_token=%s; HttpOnly; Path=/; SameSite=Lax"}', token);
-    redirect := '{"HX-Redirect": "/rpc/welcome"}';
+    redirect := '{"HX-Redirect": "/welcome"}';
     headers := format('[%s, %s]', cookie, redirect);
     perform set_config('response.headers', headers, true);
 
@@ -138,22 +178,26 @@ create or replace function api.logout() returns void as $$
             current_setting('request.cookie.session_token', true)
         );
 
-        perform set_config('response.headers', '[{"Set-Cookie": "session_token=; Path=/"}, {"HX-Redirect": "/rpc/index"}]', true);
+        perform set_config('response.headers', '[{"Set-Cookie": "session_token=; Path=/"}, {"HX-Redirect": "/"}]', true);
     end;
 $$ language plpgsql;
 
 grant execute on function api.logout to web_user;
 
--- Debugging function to print the result of the sign function
+
+-- GET debug
 create or replace function api.debug() returns text as $$
 begin
     return current_user;
 end;
 $$ language plpgsql;
 
+
+-- Permissions
 grant execute on function api.render(text, json) to web_anon, web_user;
 
 grant execute on function api.index() to web_anon, web_user;
+grant execute on function api.error(integer) to web_anon, web_user;
 grant execute on function api.register() to web_anon;
 grant execute on function api.register(text, text) to web_anon;
 grant execute on function api.login() to web_anon;
@@ -161,5 +205,3 @@ grant execute on function api.login(text, text) to web_anon;
 grant execute on function api.logout() to web_user;
 grant execute on function api.welcome() to web_user;
 grant execute on function api.debug() to web_user;
-
-

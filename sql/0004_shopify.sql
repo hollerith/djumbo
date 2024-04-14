@@ -22,7 +22,7 @@ if _hmac != calculated_hmac:
     raise Exception('HMAC validation failed')
 
 scopes = 'read_products,write_products'
-redirect_uri = 'https://usb-opposition-michael-sonic.trycloudflare.com/rpc/callback'
+redirect_uri = 'https://usb-opposition-michael-sonic.trycloudflare.com/callback'
 state = 'nonce'
 
 auth_url = f"https://{_shop}/admin/oauth/authorize?client_id={client_id}&scope={scopes}&redirect_uri={redirect_uri}&state={state}"
@@ -50,8 +50,7 @@ if response.status_code == 200:
     # Store the access token in the database
     plpy.execute(f"INSERT INTO shopify.shop (shop, access_token) VALUES ('{_shop}', '{access_token}') ON CONFLICT (shop) DO UPDATE SET access_token = '{access_token}'")
 
-    return f"<html><body><script>window.location.href='/rpc/success';</script></body></html>"
+    return f"<html><body><script>window.location.href='/success';</script></body></html>"
 else:
-    return f"<html><body><script>window.location.href='/rpc/error';</script></body></html>"
+    return f"<html><body><script>window.location.href='/error';</script></body></html>"
 $$ language plpython3u;
-

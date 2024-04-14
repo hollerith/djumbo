@@ -27,48 +27,34 @@ Inspired by Dan McKinley [^1] and Stephan Schmidt [^2].
     git clone https://github.com/hollerith/djumbo.git
     ```
 
-2. **Build and Run with Docker**: Djumbo provides a Dockerfile for easy setup and deployment. Build and run the Docker container using the following commands.
+2. **Build and Run with Docker Compose**: Djumbo provides a `docker-compose.yml` file for easy setup and deployment. Build and run the Docker containers using the following command.
 
     ```bash
-    docker build -t djumbo .
-    docker run --name djumbo -v `pwd`/templates:/var/www/templates -e POSTGRES_PASSWORD=yoursupersecretword -p 5432:5432 -d djumbo:latest
+    docker-compose up --build
     ```
 
-3. **Setup PostgreSQL**: Once the Docker container is running, execute the `setup.sql` script to initialize the database.
+3. **Explore Sample Web Pages**: Djumbo includes sample web pages defined in `pages.sql`, along with a utility function to render templates with Jinja2. Explore these examples to get started with your own web pages. Samples use HTMX and tailwindcss but you could easily use something else.
 
-    ```sql
-    psql -h localhost -U djumbo_user -d djumbo -f setup.sql
-    ```
-
-4. **Install and Run PostgREST Locally**: After setting up the database, install and run PostgREST locally to serve your Djumbo application.
-
-    ```bash
-
-    postgrest postgrest.conf
-    ```
-
-5. **Explore Sample Web Pages**: Djumbo includes sample web pages defined in `pages.sql`, along with a utility function to render templates with Jinja2. Explore these examples to get started with your own web pages. Samples use HTMX and tailwindcss but you could easily use something else.
-
-6. **Shopify App Example**: For those interested in integrating with Shopify, a sample app implementation is provided in `shopify.sql`. This example demonstrates how to interact with the Shopify API from within your Djumbo application.
+4. **Shopify App Example**: For those interested in integrating with Shopify, a sample app implementation is provided in `shopify.sql`. This example demonstrates how to interact with the Shopify API from within your Djumbo application. (wip Incomplete)
 
 ## Usage
 
 Djumbo provides a simple and intuitive interface for developing web applications. Here's a basic example of how to define a route and a corresponding function in your `pages.sql` file:
 
-    ```sql
-    -- Define a simple route
-    create or replace function api.hello_world()
-    returns "text/html" language plpgsql as $$
-    begin
-        context := json_build_object(
-            'title', 'Hello World'
-        );
-        return api.render('template.html', context::json);
-    end;
-    $$;
-    ```
+```sql
+-- Define a simple route
+create or replace function api.hello_world()
+returns "text/html" language plpgsql as $$
+begin
+    context := json_build_object(
+        'title', 'Hello World'
+    );
+    return api.render('template.html', context::json);
+end;
+$$;
+```
 
-This SQL function can be accessed by navigating to `/rpc/hello_world` in your web browser.
+This SQL function can be accessed by navigating to `/rpc/hello_world` in your web browser. Note that we use nginx rewrite rules to remove the postgrest default "/rpc/" part.
 
 ## License
 
@@ -76,5 +62,5 @@ Djumbo is open-source software licensed under the MIT License. See the [LICENSE]
 
 ## Notes
 
-[^1]: https://boringtechnology.club
-[^2]: https://www.radicalsimpli.city
+- [^1]: https://boringtechnology.club
+- [^2]: https://www.radicalsimpli.city

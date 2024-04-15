@@ -81,7 +81,7 @@ begin
     if total_pages <= 5 then
         pagination_links := 'Pages ';
         for i in 1..total_pages loop
-            pagination_links := pagination_links || format('<a href="?list=%s&page=%s">%s</a>', list, i, i);
+            pagination_links := pagination_links || format('<a href="/admin?list=%s&page=%s">%s</a>', list, i, i);
             if i < total_pages then
                 pagination_links := pagination_links || ', ';
             end if;
@@ -95,7 +95,7 @@ begin
 
         -- Show one page before and after the current page, if possible
         for i in greatest(2, current_page - 1)..least(total_pages - 1, current_page + 1) loop
-            pagination_links := pagination_links || format('<a href="?list=%s&page=%s">%s</a> ', list, i, i);
+            pagination_links := pagination_links || format('<a href="/admin?list=%s&page=%s">%s</a> ', list, i, i);
         end loop;
 
         if current_page < total_pages - 1 then
@@ -103,7 +103,7 @@ begin
         end if;
 
         -- Always link to the last page
-        pagination_links := pagination_links || format('<a href="?list=%s&page=%s">of %s</a>', list, total_pages, total_pages);
+        pagination_links := pagination_links || format('<a href="/admin?list=%s&page=%s">of %s</a>', list, total_pages, total_pages);
     end if;
 
     return format($html$
@@ -113,7 +113,7 @@ end;
 $$ language plpgsql;
 
 -- DROP FUNCTION api.table_rows_sql(text, text, text, int4, int4);
-create or replace function api.table_rows_sql(row_tag text, col_tag text, tablename text, page_size integer, page_offset integer) returns text as $function$
+create or replace function api.table_rows_sql(row_tag text, col_tag text, tablename text, page_size integer, page_offset integer) returns text as $$
 declare
     column_sql text := '';
     dynamic_sql text;
@@ -147,7 +147,7 @@ begin
 
     return dynamic_sql;
 end;
-$function$ language plpgsql;
+$$ language plpgsql;
 
 -- DROP FUNCTION api.to_base32(varbit);
 create or replace function api.to_base32(bs bit varying) returns text as $$

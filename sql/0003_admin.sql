@@ -1,4 +1,4 @@
--- DROP FUNCTION api."admin"(text, int4);
+-- drop function api."admin"(text, int4);
 create or replace function api.admin(list text, page integer default 1) returns "text/html" as $$
 declare
     page_size integer := 10;
@@ -71,7 +71,7 @@ begin
 end;
 $$ language plpgsql;
 
--- DROP FUNCTION api.pagination(text, int4, int4);
+-- drop function api.pagination(text, int4, int4);
 create or replace function api.pagination(list text, current_page integer, total_pages integer)
  returns text as $$
 declare
@@ -112,7 +112,7 @@ begin
 end;
 $$ language plpgsql;
 
--- DROP FUNCTION api.table_rows_sql(text, text, text, int4, int4);
+-- drop function api.table_rows_sql(text, text, text, int4, int4);
 create or replace function api.table_rows_sql(row_tag text, col_tag text, tablename text, page_size integer, page_offset integer) returns text as $$
 declare
     column_sql text := '';
@@ -149,7 +149,7 @@ begin
 end;
 $$ language plpgsql;
 
--- DROP FUNCTION api.to_base32(varbit);
+-- drop function api.to_base32(varbit);
 create or replace function api.to_base32(bs bit varying) returns text as $$
 declare
     result text;

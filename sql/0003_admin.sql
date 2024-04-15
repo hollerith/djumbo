@@ -1,10 +1,6 @@
 -- DROP FUNCTION api."admin"(text, int4);
-
-CREATE OR REPLACE FUNCTION api.admin(list text, page integer DEFAULT 1)
- RETURNS "text/html"
- LANGUAGE plpgsql
-AS $function$
-DECLARE
+create or replace function api.admin(list text, page integer default 1) returns "text/html" as $$
+declare
     page_size integer := 10;
     page_offset integer;
     total_rows integer;
@@ -15,163 +11,125 @@ DECLARE
     thead text := '';
     tbody text := '';
     tfoot text := '';
-BEGIN
+    context json;
+    user_session_info json;
+begin
 
     -- Fetch and construct column headers
-    SELECT INTO thead string_agg(format('<th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">%s</th>', replace(initcap(column_name), '_', ' ')), '')
-    FROM information_schema.columns
-    WHERE table_schema = 'api' AND table_name = list;
+    select into thead string_agg(format('<th class="border border-gray-200 px-4 py-2 text-left">%s</th>', replace(initcap(column_name), '_', ' ')), '')
+      from information_schema.columns
+     where table_schema = 'api'
+       and table_name = list;
 
     -- Calculate the page offset
     page_offset := (page - 1) * page_size;
 
     -- Generate dynamic SQL using the helper function
-    dynamic_sql := api.table_rows_sql('<tr class="hover:text-red-500 odd:bg-yellow-100 even:bg-yellow-300">', '<td class="px-6 py-4 whitespace-nowrap font-medium">', list, page_size, page_offset);
+    dynamic_sql := api.table_rows_sql('<tr class="odd:bg-blue-100 even:bg-yellow-50">', '<td class="border border-gray-200 px-4 py-2 text-left">', list, page_size, page_offset);
 
     -- Execute the dynamic SQL and fetch each row
-    FOR row_html IN EXECUTE dynamic_sql
-    LOOP
+    for row_html in execute dynamic_sql
+    loop
         tbody := tbody || row_html;
-    END LOOP;
+    end loop;
 
     -- Calculate total rows and pages for pagination
-    EXECUTE format('SELECT COUNT(*) FROM api.%I', list) INTO total_rows;
+    execute format('SELECT COUNT(*) FROM api.%I', list) into total_rows;
+
     total_pages := CEIL(total_rows::numeric / page_size);
     tfoot := api.pagination(list, page, total_pages);
 
     -- Combine all parts into the final HTML output
     html_output := format($html$
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1">
-            <title>Admin :: %s</title>
-            <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio,line-clamp"></script>
-            <script src="https://unpkg.com/htmx.org"></script>
-        </head>
-        <body class="bg-gray-800">
-            <div class="flex">
-                <!-- Sidebar for desktop -->
-                <div class="hidden lg:block bg-black h-screen w-64">
-                    <h5 class="mb-3 text-2xl font-bold tracking-tight text-blue-100 p-6">Admin</h5>
-                    <ul class="p-6">
-                        <li><a href="?list=couriers&page=1" class="text-blue-300 hover:text-blue-500 block">Couriers</a></li>
-                        <li><a href="?list=channels&page=1" class="text-blue-300 hover:text-blue-500 block">Channels</a></li>
-                        <li><a href="?list=shipments&page=1" class="text-blue-300 hover:text-blue-500 block">Shipments</a></li>
-                        <li><a href="?list=orders&page=1" class="text-blue-300 hover:text-blue-500 block">Orders</a></li>
-                        <li><a href="?list=merchants&page=1" class="text-blue-300 hover:text-blue-500 block">Merchants</a></li>
-                        <li><a href="?list=ticker&page=1" class="text-blue-300 hover:text-blue-500 block">Ticker</a></li>
-                        <li><a href="?list=todos&page=1" class="text-blue-300 hover:text-blue-500 block">Todos</a></li>
-                    </ul>
-                </div>
-                <!-- Main content area -->
-                <div class="mt-5 p-6 w-full">
-                    <h5 class="mb-3 text-2xl font-bold tracking-tight text-blue-100"> :: %s</h5>
-                    <div style="overflow-x: auto;">
-                        <table class="min-w-full">
-                            <thead class="bg-gray-500 text-white">
-                              <tr>%s<th>Actions</th></tr>
-                            </thead>
-                            <tbody class="bg-gray-900">
-                              %s
-                            </tbody>
-                            <tfoot class="bg-gray-500 text-white">
-                              <tr>%s</tr>
-                            </tfoot>
-                        </table>
-                    </div>
-                </div>
-                <!-- Sidebar for desktop -->
-                <div class="hidden lg:block bg-black h-screen w-64">
-                    <h5 class="mb-3 text-2xl font-bold tracking-tight text-blue-100 p-6">Filters</h5>
-                    <ul class="p-6">
-                        <li><a href="?list=couriers&page=1" class="text-blue-300 hover:text-blue-500 block">Couriers</a></li>
-                        <li><a href="?list=channels&page=1" class="text-blue-300 hover:text-blue-500 block">Channels</a></li>
-                        <li><a href="?list=shipments&page=1" class="text-blue-300 hover:text-blue-500 block">Shipments</a></li>
-                        <li><a href="?list=orders&page=1" class="text-blue-300 hover:text-blue-500 block">Orders</a></li>
-                        <li><a href="?list=merchants&page=1" class="text-blue-300 hover:text-blue-500 block">Merchants</a></li>
-                        <li><a href="?list=ticker&page=1" class="text-blue-300 hover:text-blue-500 block">Ticker</a></li>
-                        <li><a href="?list=todos&page=1" class="text-blue-300 hover:text-blue-500 block">Todos</a></li>
-                    </ul>
-                </div>
+        <!-- Main content area -->
+            <div class="mb-8">
+                <h2 class="text-xl font-semibold mb-4">%s</h2>
+                <table class="min-w-full table-auto border-collapse border border-gray-200">
+                    <thead class="bg-gray-200">
+                        <tr>%s<th>Actions</th></tr>
+                    </thead>
+                    <tbody>
+                        %s
+                    </tbody>
+                    <tfoot class="bg-gray-500 text-white">
+                        <tr>%s</tr>
+                    </tfoot>
+                </table>
             </div>
-        </body>
-        </html>
-    $html$, list, list, thead, tbody, tfoot);
+        </div>
+    $html$, initcap(list), thead, tbody, tfoot);
 
-    RETURN html_output;
-END;
-$function$
-;
+    -- Fetch the user session information using the auth.authenticate() function
+    select auth.authenticate() into user_session_info;
+
+    context := json_build_object(
+        'safe_html', html_output,
+        'user_session_info', user_session_info
+    );
+
+    return api.render('admin.html', context);
+end;
+$$ language plpgsql;
 
 -- DROP FUNCTION api.pagination(text, int4, int4);
-
-CREATE OR REPLACE FUNCTION api.pagination(list text, current_page integer, total_pages integer)
- RETURNS text
- LANGUAGE plpgsql
-AS $function$
-DECLARE
+create or replace function api.pagination(list text, current_page integer, total_pages integer)
+ returns text as $$
+declare
     pagination_links text := '';
     i integer;
-BEGIN
-    IF total_pages <= 5 THEN
+begin
+    if total_pages <= 5 then
         pagination_links := 'Pages ';
-        FOR i IN 1..total_pages LOOP
+        for i in 1..total_pages loop
             pagination_links := pagination_links || format('<a href="?list=%s&page=%s">%s</a>', list, i, i);
-            IF i < total_pages THEN
+            if i < total_pages then
                 pagination_links := pagination_links || ', ';
-            END IF;
-        END LOOP;
-    ELSE
+            end if;
+        end loop;
+    else
         -- Always link to the first page
         pagination_links := format('<a href="?list=%s&page=1">Page 1</a> ', list);
-        IF current_page > 2 THEN
+        if current_page > 2 then
             pagination_links := pagination_links || '... ';
-        END IF;
+        end if;
 
         -- Show one page before and after the current page, if possible
-        FOR i IN GREATEST(2, current_page - 1)..LEAST(total_pages - 1, current_page + 1) LOOP
+        for i in greatest(2, current_page - 1)..least(total_pages - 1, current_page + 1) loop
             pagination_links := pagination_links || format('<a href="?list=%s&page=%s">%s</a> ', list, i, i);
-        END LOOP;
+        end loop;
 
-        IF current_page < total_pages - 1 THEN
+        if current_page < total_pages - 1 then
             pagination_links := pagination_links || '... ';
-        END IF;
+        end if;
 
         -- Always link to the last page
         pagination_links := pagination_links || format('<a href="?list=%s&page=%s">of %s</a>', list, total_pages, total_pages);
-    END IF;
+    end if;
 
-    RETURN format($html$
+    return format($html$
       <td colspan="100%%" class="px-6 py-4 whitespace-nowrap font-medium">%s</td>
     $html$, pagination_links);
-END;
-$function$
-;
+end;
+$$ language plpgsql;
 
 -- DROP FUNCTION api.table_rows_sql(text, text, text, int4, int4);
-
-CREATE OR REPLACE FUNCTION api.table_rows_sql(row_tag text, col_tag text, tablename text, page_size integer, page_offset integer)
- RETURNS text
- LANGUAGE plpgsql
-AS $function$
-DECLARE
-    column_sql TEXT := '';
-    dynamic_sql TEXT;
+create or replace function api.table_rows_sql(row_tag text, col_tag text, tablename text, page_size integer, page_offset integer) returns text as $function$
+declare
+    column_sql text := '';
+    dynamic_sql text;
     primary_key_column text;
-BEGIN
+begin
     -- Fetch the primary key column name
-    SELECT kcu.column_name INTO primary_key_column
-    FROM information_schema.table_constraints tc
-    JOIN information_schema.key_column_usage kcu ON tc.constraint_name = kcu.constraint_name
-    WHERE tc.table_schema = 'api' AND tc.table_name = tablename AND tc.constraint_type = 'PRIMARY KEY';
+    select kcu.column_name into primary_key_column
+      from information_schema.table_constraints tc
+      join information_schema.key_column_usage kcu on tc.constraint_name = kcu.constraint_name
+     where tc.table_schema = 'api' and tc.table_name = tablename and tc.constraint_type = 'PRIMARY KEY';
 
     -- Construct the SQL part for column data wrapped in col_tag, handling NULL values
-    SELECT INTO column_sql
-        string_agg(format('''%s'' || COALESCE(%I::text, '''') || ''%s''', col_tag, column_name, '</td>'), ' || ')
-    FROM information_schema.columns
-    WHERE table_schema = 'api' AND table_name = tablename;
+    select into column_sql
+           string_agg(format('''%s'' || coalesce(%I::text, '''') || ''%s''', col_tag, column_name, '</td>'), ' || ')
+      from information_schema.columns
+     where table_schema = 'api' and table_name = tablename;
 
     dynamic_sql := format('SELECT ''%s'' || %s || ''<td class="flex justify-center align-middle py-4">
     <button class="p-1.5 rounded-full hover:bg-gray-700 focus:ring-gray-800" hx-get="/edit?form=%s&_id='' || %I || ''" hx-target="#list" hx-trigger="click">
@@ -187,24 +145,19 @@ BEGIN
     </button>
 </td>'' || ''</tr>'' FROM api.%I LIMIT %L OFFSET %L', row_tag, column_sql, tablename, primary_key_column, tablename, primary_key_column, tablename, page_size, page_offset);
 
-    RETURN dynamic_sql;
-END;
-$function$
-;
+    return dynamic_sql;
+end;
+$function$ language plpgsql;
 
 -- DROP FUNCTION api.to_base32(varbit);
-
-CREATE OR REPLACE FUNCTION api.to_base32(bs bit varying)
- RETURNS text
- LANGUAGE plpgsql
-AS $function$
-DECLARE
-    result  text;
+create or replace function api.to_base32(bs bit varying) returns text as $$
+declare
+    result text;
     _cur    bigint;
     _w      bit(64);
     _holder bit(64) = 31 :: bit(64);
-    _chars  char(32) = 'abcdefghjklmnpqrstuvwxyz23456789';
-BEGIN
+    _chars char(32) = 'abcdefghjklmnpqrstuvwxyz23456789';
+begin
     result = '';
     _w = bs :: bit(64) >> (64 - length(bs));
     loop
@@ -213,7 +166,11 @@ BEGIN
         result = substr(_chars, _cur :: integer, 1) || result;
         _w = _w >> 5;
     end loop;
-    RETURN result;
-END;
-$function$
-;
+    return result;
+end;
+$$ language plpgsql;
+
+grant execute on function api.admin(text, integer) to web_anon, web_user;
+grant execute on function api.to_base32(varbit) to web_anon, web_user;
+grant execute on function api.table_rows_sql(text, text, text, integer, integer) to web_anon, web_user;
+grant execute on function api.pagination(text, integer, integer) to web_anon, web_user;

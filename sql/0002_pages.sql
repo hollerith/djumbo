@@ -68,7 +68,6 @@ end;
 $$;
 
 
-
 -- GET welcome
 create or replace function api.welcome()
 returns "text/html" language plpgsql as $$
@@ -82,7 +81,7 @@ begin
     select json_agg(row_to_json(t)) into activity
     from (
         select datid, datname, pid, usesysid, usename, application_name, client_addr, client_hostname
-        from pg_stat_activity
+        from pg_stat_activity where datid is not null limit 10
     ) t;
 
     -- Gather selected user tables information, excluding n_tup* columns

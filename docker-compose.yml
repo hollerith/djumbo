@@ -25,7 +25,7 @@ services:
       PGRST_PRE_REQUEST: "auth.authenticate"
 
   nginx:
-    image: nginx
+    image: djumbo_ngrinx:latest 
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf
       - ./static:/var/www/static

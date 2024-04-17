@@ -22,11 +22,16 @@ create or replace function api.index()
 returns "text/html" language plpgsql as $$
 declare
     context json;
+    user_session_info json;
 begin
+    select auth.authenticate() into user_session_info;
+
     context := json_build_object(
         'title', 'jinja2 djumbo',
-        'headline', 'Welcome to Djumbo 0.01'
+        'headline', 'Welcome to Djumbo 0.02',
+        'user_session_info', user_session_info
     );
+
     return api.render('index.html', context::json);
 end;
 $$;

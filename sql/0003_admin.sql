@@ -12,7 +12,7 @@ declare
     tbody text := '';
     tfoot text := '';
     context json;
-    user_session_info json;
+    login json;
 begin
 
     -- Fetch and construct column headers
@@ -60,11 +60,11 @@ begin
     $html$, initcap(list), thead, tbody, tfoot);
 
     -- Fetch the user session information using the auth.authenticate() function
-    select auth.authenticate() into user_session_info;
+    select auth.authenticate() into login;
 
     context := json_build_object(
         'safe_html', html_output,
-        'user_session_info', user_session_info
+        'login', login
     );
 
     return api.render('admin.html', context);

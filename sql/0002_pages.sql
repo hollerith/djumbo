@@ -18,16 +18,11 @@ $$;
 
 
 -- djumbo markdown mistletoe
-create or replace function api.markdown(markdown_file_path text, context json)
+create or replace function api.markdown(template_name text, context json)
 returns "text/html" language plpython3u as $$
 import json
 import jinja2 as j2
 import mistletoe as md
-
-with open(markdown_file_path, 'r') as file:
-    markdown_content = file.read()
-
-html_content = md.markdown(markdown_content)
 
 template = """
 {% extends 'base.html' %}
@@ -38,9 +33,24 @@ template = """
 {% endblock %}
 """
 
-jinja_env = j2.Environment(loader=j2.BaseLoader())
-jinja_template = jinja_env.from_string(template)
-rendered_html = jinja_template.render(html_content=html_content, **json.loads(context))
+template_path = f"/var/www/pages/{template_name}".replace('../','')
+try:
+    with open(template_path, 'r') as file:
+        markdown_content = file.read()
+    html_content = md.markdown(markdown_content)
+except Exception as e:
+    raise plpy.Error(f'Markdown processing failed: {str(e)}')
+
+try:
+    jinja_env = j2.Environment(loader=j2.FileSystemLoader('/var/www/templates'))
+    jinja_template = jinja_env.from_string(template)
+
+    context_json = json.loads(context)
+    context_json['html_content'] = html_content
+    rendered_html = jinja_template.render(context_json)
+except Exception as e:
+    raise plpy.Error(f'Template rendering failed: error {str(e)}')
+
 return rendered_html
 $$;
 
@@ -50,14 +60,14 @@ create or replace function api.index()
 returns "text/html" language plpgsql as $$
 declare
     context json;
-    user_session_info json;
+    login json;
 begin
-    select auth.authenticate() into user_session_info;
+    select auth.authenticate() into login;
 
     context := json_build_object(
         'title', 'jinja2 djumbo',
         'headline', 'Welcome to Djumbo 0.02',
-        'user_session_info', user_session_info
+        'login', login
     );
 
     return api.render('index.html', context::json);
@@ -108,7 +118,7 @@ declare
     context json;
     activity json;
     user_tables json;
-    user_session_info json;
+    login json;
 begin
     -- Gather selected activity information
     select json_agg(row_to_json(t)) into activity
@@ -125,7 +135,7 @@ begin
     ) t;
 
     -- Fetch the user session information using the auth.authenticate() function
-    select auth.authenticate() into user_session_info;
+    select auth.authenticate() into login;
 
     context := json_build_object(
         'current_user', current_user,
@@ -133,7 +143,7 @@ begin
         'current_schema', current_schema(),
         'activity', activity,
         'user_tables', user_tables,
-        'user_session_info', user_session_info
+        'login', login
     );
 
     return api.render('welcome.html', context::json);
@@ -145,16 +155,33 @@ create or replace function api.about()
 returns "text/html" language plpgsql as $$
 declare
     context json;
-    user_session_info json;
+    login json;
 begin
-    select auth.authenticate() into user_session_info;
+    select auth.authenticate() into login;
 
     context := json_build_object(
         'title', 'Djumbo README.md',
-        'user_session_info', user_session_info
+        'login', login
     );
 
-    return api.markdown('README.md', context::json);
+    return api.markdown('About.md', context::json);
+end;
+$$;
+
+-- GET link
+create or replace function api.link(page_name text)
+returns "text/html" language plpgsql as $$
+declare
+    context json;
+    login json;
+begin
+    select auth.authenticate() into login;
+
+    context := json_build_object(
+        'login', login
+    );
+
+    return api.markdown(page_name, context::json);
 end;
 $$;
 
@@ -252,6 +279,7 @@ $$ language plpgsql;
 
 -- Permissions
 grant execute on function api.render(text, json) to web_anon, web_user;
+grant execute on function api.markdown(text, json) to web_anon, web_user;
 
 grant execute on function api.index() to web_anon, web_user;
 grant execute on function api.error(integer) to web_anon, web_user;
@@ -261,4 +289,7 @@ grant execute on function api.login() to web_anon;
 grant execute on function api.login(text, text) to web_anon;
 grant execute on function api.logout() to web_user;
 grant execute on function api.welcome() to web_user;
+grant execute on function api.about() to web_anon, web_user;
+grant execute on function api.link(text) to web_anon, web_user;
 grant execute on function api.debug() to web_user;
+

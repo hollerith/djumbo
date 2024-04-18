@@ -12,7 +12,6 @@
     <script src="https://unpkg.com/htmx.org/dist/ext/remove-me.js"></script>
 
     <link href="/static/output.css" rel="stylesheet">
-    <link href="/static/markdown.css" rel="stylesheet">
 </head>
 <body class="bg-gray-800">
     <div class="flex">
@@ -30,7 +29,7 @@
 
             <ul class="p-6">
                 <li><a href="/" class="text-blue-300 hover:text-blue-500 block">Home</a></li>
-                {% if user_session_info %}
+                {% if login %}
                 <li><a href="/welcome" class="text-blue-300 hover:text-blue-500 block">Welcome</a></li>
                 <li><a href="/debug" class="text-blue-300 hover:text-blue-500 block">Debug</a></li>
                 <li><a href="/logout" hx-post="/logout" class="text-blue-300 hover:text-blue-500 block">Logout</a></li>
@@ -38,6 +37,8 @@
                 <li><a href="/login" class="text-blue-300 hover:text-blue-500 block">Login</a></li>
                 <li><a href="/register" class="text-blue-300 hover:text-blue-500 block">Register</a></li>
                 {% endif %}
+                <li><a href="/link?page_name=Test.md" class="text-blue-300 hover:text-blue-500 block">Test</a></li>
+                <li><a href="/about" class="text-blue-300 hover:text-blue-500 block">About</a></li>
             </ul>
 
             <ul class="px-6">

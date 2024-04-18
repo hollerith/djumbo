@@ -5,6 +5,7 @@ services:
     image: djumbo_postgres:latest
     volumes:
       - ./templates:/var/www/templates
+      - ./pages:/var/www/pages
       - ./sql:/docker-entrypoint-initdb.d
     environment:
       POSTGRES_PASSWORD: mysecretpassword

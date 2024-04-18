@@ -17,6 +17,34 @@ return html_content
 $$;
 
 
+-- djumbo markdown mistletoe
+create or replace function api.markdown(markdown_file_path text, context json)
+returns "text/html" language plpython3u as $$
+import json
+import jinja2 as j2
+import mistletoe as md
+
+with open(markdown_file_path, 'r') as file:
+    markdown_content = file.read()
+
+html_content = md.markdown(markdown_content)
+
+template = """
+{% extends 'base.html' %}
+{% block content %}
+<div class='markdown'>
+    {{ html_content | safe }}
+</div>
+{% endblock %}
+"""
+
+jinja_env = j2.Environment(loader=j2.BaseLoader())
+jinja_template = jinja_env.from_string(template)
+rendered_html = jinja_template.render(html_content=html_content, **json.loads(context))
+return rendered_html
+$$;
+
+
 -- GET index
 create or replace function api.index()
 returns "text/html" language plpgsql as $$
@@ -112,6 +140,23 @@ begin
 end;
 $$;
 
+-- GET about
+create or replace function api.about()
+returns "text/html" language plpgsql as $$
+declare
+    context json;
+    user_session_info json;
+begin
+    select auth.authenticate() into user_session_info;
+
+    context := json_build_object(
+        'title', 'Djumbo README.md',
+        'user_session_info', user_session_info
+    );
+
+    return api.markdown('README.md', context::json);
+end;
+$$;
 
 -- GET register
 create or replace function api.register()

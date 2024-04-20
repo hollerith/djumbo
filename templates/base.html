@@ -10,62 +10,56 @@
     <script src="https://unpkg.com/htmx.org@1.9.10" integrity="sha384-D1Kt99CQMDuVetoL1lrYwg5t+9QdHe7NLX/SoJYkXDFfX37iInKRy5xLSi8nO7UC" crossorigin="anonymous"></script>
     <script src="https://unpkg.com/htmx.org@1.9.10/dist/ext/response-targets.js"></script>
     <script src="https://unpkg.com/htmx.org/dist/ext/remove-me.js"></script>
-
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="/static/output.css" rel="stylesheet">
 </head>
-<body class="bg-gray-800">
-    <div class="flex">
-        <!-- Sidebar for desktop -->
-        {% block westside %}
-        <div class="hidden lg:block bg-black h-screen w-64">
-
-            <img src="/static/djumbo.png" alt="Logo" class="mx-auto mt-5 w-24 h-24 object-contain">
-            <div class="flex justify-center mt-4">
-                <div class="relative text-white text-3xl font-sans">
-                    <span class="tracking-widest">jumbo</span>
-                    <span class="absolute inset-x-0 top-0 flex items-end justify-center text-4xl -mt-3 -ml-24">D</span>
+<body class="bg-gray-100">
+    <div class="container mx-auto p-4 mb-4">
+        {% block header %}
+        <div class="bg-white shadow-md rounded px-8 mb-4">
+            <nav class="flex items-center justify-between flex-wrap bg-white p-6">
+                <div class="flex items-center flex-shrink-0 text-black mr-6">
+                    <a href="/"><span class="font-semibold text-green-800 text-xl tracking-tight">Djumbo</span></a>
                 </div>
+                <div class="block lg:hidden">
+                    <button class="flex items-center px-3 py-2 border rounded text-black border-gray-400 hover:text-green-800 hover:border-gray-200">
+                        <svg class="fill-current h-3 w-3" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                            <title>Menu</title>
+                            <path d="M0 3h20v2H0V3zm0 6h20v2H0V9zm0 6h20v2H0v-2z"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="w-full block flex-grow lg:flex lg:items-center lg:w-auto">
+                    <div class="text-sm lg:flex-grow">
+                        <a href="/link?page_name=Test.md" class="block mt-4 lg:inline-block lg:mt-0 text-black hover:text-green-800 mr-4">Test</a>
+                        <a href="/admin?list=todos&page=1" class="block mt-4 lg:inline-block lg:mt-0 text-black hover:text-green-800 mr-4">Todo</a>
+                        <a href="/about" class="block mt-4 lg:inline-block lg:mt-0 text-black hover:text-green-800 mr-4">About</a>
+
+                        {% if login %}
+                            <a href="/welcome" class="block mt-4 lg:inline-block lg:mt-0 text-black hover:text-green-800 mr-4">Welcome</a>
+                            <a href="/debug" class="block mt-4 lg:inline-block lg:mt-0 text-black hover:text-green-800 mr-4">Debug</a>
+                            <a href="/logout" hx-post="/logout" class="block mt-4 lg:inline-block lg:mt-0 text-black hover:text-green-800 mr-4">Logout</a>
+                        {% else %}
+                            <a href="/register" class="block mt-4 lg:inline-block lg:mt-0 text-black hover:text-green-800 mr-4">Register</a>
+                            <a href="/login" class="block mt-4 lg:inline-block lg:mt-0 text-black hover:text-green-800 mr-4">Login</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </nav>
+        </div>
+        {% endblock %}
+        <div id="container" class="flex flex-wrap">
+            <!-- Main content area -->
+            <div class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4 w-full">
+                {% block content %}
+
+                {% endblock %}
             </div>
-
-            <ul class="p-6">
-                <li><a href="/" class="text-blue-300 hover:text-blue-500 block">Home</a></li>
-                {% if login %}
-                <li><a href="/welcome" class="text-blue-300 hover:text-blue-500 block">Welcome</a></li>
-                <li><a href="/debug" class="text-blue-300 hover:text-blue-500 block">Debug</a></li>
-                <li><a href="/logout" hx-post="/logout" class="text-blue-300 hover:text-blue-500 block">Logout</a></li>
-                {% else %}
-                <li><a href="/login" class="text-blue-300 hover:text-blue-500 block">Login</a></li>
-                <li><a href="/register" class="text-blue-300 hover:text-blue-500 block">Register</a></li>
-                {% endif %}
-                <li><a href="/link?page_name=Test.md" class="text-blue-300 hover:text-blue-500 block">Test</a></li>
-                <li><a href="/about" class="text-blue-300 hover:text-blue-500 block">About</a></li>
-            </ul>
-
-            <ul class="px-6">
-                <li><a href="https://postgrest.org/en/v12/tutorials/tut0.html" class="text-blue-300 hover:text-blue-500 block">PostgREST</a></li>
-            </ul>
-
-            <ul class="p-6">
-                <li><a href="/admin?list=couriers&page=1" class="text-blue-300 hover:text-blue-500 block">Couriers</a></li>
-                <li><a href="/admin?list=channels&page=1" class="text-blue-300 hover:text-blue-500 block">Channels</a></li>
-                <li><a href="/admin?list=shipments&page=1" class="text-blue-300 hover:text-blue-500 block">Shipments</a></li>
-                <li><a href="/admin?list=orders&page=1" class="text-blue-300 hover:text-blue-500 block">Orders</a></li>
-                <li><a href="/admin?list=merchants&page=1" class="text-blue-300 hover:text-blue-500 block">Merchants</a></li>
-                <li><a href="/admin?list=ticker&page=1" class="text-blue-300 hover:text-blue-500 block">Ticker</a></li>
-                <li><a href="/admin?list=todos&page=1" class="text-blue-300 hover:text-blue-500 block">Todos</a></li>
-            </ul>
         </div>
-        {% endblock %}
-        <!-- Main content area -->
-        <div class="mt-5 p-6 w-full">
-            {% block content %}
-
-            {% endblock %}
-        </div>
-        <!-- Right sidebar for desktop -->
-        {% block eastside %}
-        {% endblock %}
     </div>
+    {% block scripts %}
 
+    {% endblock %}
 </body>
 </html>

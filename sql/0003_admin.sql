@@ -1,6 +1,32 @@
 -- drop function api."admin"(text, int4);
 create or replace function api.admin(list text, page integer default 1) returns "text/html" as $$
 declare
+    html_output text;
+    context json;
+    session_info json;
+begin
+
+    -- Fetch the user session information using the auth.authenticate() function
+    select auth.authenticate() into session_info;
+
+    html_output = api.sheet(list, page);
+
+    context := json_build_object(
+        'current_user', current_user,
+        'current_database', current_database(),
+        'current_schema', current_schema(),
+        'table_html', html_output,
+        'login', session_info
+    );
+
+    return api.render('admin.html', context);
+end;
+$$ language plpgsql;
+
+
+-- drop function api."sheet"(text, int4);
+create or replace function api.sheet(list text, page_no integer default 1) returns "text/html" as $$
+declare
     page_size integer := 10;
     page_offset integer;
     total_rows integer;
@@ -22,10 +48,10 @@ begin
        and table_name = list;
 
     -- Calculate the page offset
-    page_offset := (page - 1) * page_size;
+    page_offset := (page_no - 1) * page_size;
 
     -- Generate dynamic SQL using the helper function
-    dynamic_sql := api.table_rows_sql('<tr class="odd:bg-blue-100 even:bg-yellow-50">', '<td class="border border-gray-200 px-4 py-2 text-left">', list, page_size, page_offset);
+    dynamic_sql := api.table_rows_sql('<tr>', '<td class="border border-gray-200 px-4 py-2 text-left">', list, page_size, page_offset);
 
     -- Execute the dynamic SQL and fetch each row
     for row_html in execute dynamic_sql
@@ -37,37 +63,17 @@ begin
     execute format('SELECT COUNT(*) FROM api.%I', list) into total_rows;
 
     total_pages := CEIL(total_rows::numeric / page_size);
-    tfoot := api.pagination(list, page, total_pages);
-
-    -- Combine all parts into the final HTML output
-    html_output := format($html$
-        <!-- Main content area -->
-            <div class="mb-8">
-                <h2 class="text-xl font-semibold mb-4">%s</h2>
-                <table class="min-w-full table-auto border-collapse border border-gray-200">
-                    <thead class="bg-gray-200">
-                        <tr>%s<th>Actions</th></tr>
-                    </thead>
-                    <tbody>
-                        %s
-                    </tbody>
-                    <tfoot class="bg-gray-500 text-white">
-                        <tr>%s</tr>
-                    </tfoot>
-                </table>
-            </div>
-        </div>
-    $html$, initcap(list), thead, tbody, tfoot);
-
-    -- Fetch the user session information using the auth.authenticate() function
-    select auth.authenticate() into login;
+    tfoot := api.pagination(list, page_no, total_pages);
 
     context := json_build_object(
-        'safe_html', html_output,
-        'login', login
+        'id', list,
+        'title', initcap(list),
+        'thead', thead,
+        'tbody', tbody,
+        'tfoot', tfoot
     );
 
-    return api.render('admin.html', context);
+    return api.render('table.html', context);
 end;
 $$ language plpgsql;
 
@@ -90,19 +96,11 @@ begin
       from information_schema.columns
      where table_schema = 'api' and table_name = tablename;
 
-    dynamic_sql := format('SELECT ''%s'' || %s || ''<td class="flex justify-center align-middle py-4">
-    <button class="p-1.5 rounded-full hover:bg-gray-700 focus:ring-gray-800" hx-get="/edit?form=%s&_id='' || %I || ''" hx-target="#list" hx-trigger="click">
-    <svg class="w-4 h-4 text-blue-300" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 18">
-        <path d="M12.687 14.408a3.01 3.01 0 0 1-1.533.821l-3.566.713a3 3 0 0 1-3.53-3.53l.713-3.566a3.01 3.01 0 0 1 .821-1.533L10.905 2H2.167A2.169 2.169 0 0 0 0 4.167v11.666A2.169 2.169 0 0 0 2.167 18h11.666A2.169 2.169 0 0 0 16 15.833V11.1l-3.313 3.308Zm5.53-9.065.546-.546a2.518 2.518 0 0 0 0-3.56 2.576 2.576 0 0 0-3.559 0l-.547.547 3.56 3.56Z"/>
-        <path d="M13.243 3.2 7.359 9.081a.5.5 0 0 0-.136.256L6.51 12.9a.5.5 0 0 0 .59.59l3.566-.713a.5.5 0 0 0 .255-.136L16.8 6.757 13.243 3.2Z"/>
-    </svg>
-    </button>
-    <button class="p-1.5 rounded-full hover:bg-gray-700 focus:ring-gray-800" hx-get="/delete?form=%s&_id='' || %I || ''" hx-target="#list" hx-trigger="click">
-    <svg class="w-4 h-4 text-red-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 18 20">
-        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 5h16M7 8v8m4-8v8M7 1h4a1 1 0 0 1 1 1v3H6V2a1 1 0 0 1 1-1ZM3 5h12v13a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5Z"/>
-    </svg>
-    </button>
-</td>'' || ''</tr>'' FROM api.%I LIMIT %L OFFSET %L', row_tag, column_sql, tablename, primary_key_column, tablename, primary_key_column, tablename, page_size, page_offset);
+    if primary_key_column is null then
+        dynamic_sql := format('SELECT ''<tr id="pk-'' || row_number() over () || ''">'' || %s || ''</tr>'' FROM api.%I LIMIT %L OFFSET %L', column_sql, tablename, page_size, page_offset);
+    else
+        dynamic_sql := format('SELECT ''<tr id="'' || %I || ''">'' || %s || ''</tr>'' FROM api.%I LIMIT %L OFFSET %L', primary_key_column, column_sql, tablename, page_size, page_offset);
+    end if;
 
     return dynamic_sql;
 end;
@@ -116,23 +114,23 @@ declare
     i integer;
 begin
     if total_pages <= 5 then
-        pagination_links := 'Pages ';
+        pagination_links := 'Page ';
         for i in 1..total_pages loop
-            pagination_links := pagination_links || format('<a href="/admin?list=%s&page=%s">%s</a>', list, i, i);
+            pagination_links := pagination_links || format('<a class="hover:text-blue-500" href="" hx-get="/sheet?list=%s&page_no=%s" hx-target="#%s" hx-swap="outerHTML" hx-headers=''{"Accept": "text/html"}''>%s</a>', list, i, list, i);
             if i < total_pages then
                 pagination_links := pagination_links || ', ';
             end if;
         end loop;
     else
         -- Always link to the first page
-        pagination_links := format('<a href="?list=%s&page=1">Page 1</a> ', list);
+        pagination_links := format('Page <a class="hover:text-blue-500" href="" hx-get="/sheet?list=%s&page=1" hx-target="#%s" hx-swap="outerHTML" hx-headers=''{"Accept": "text/html"}''>1</a> ', list, list);
         if current_page > 2 then
             pagination_links := pagination_links || '... ';
         end if;
 
         -- Show one page before and after the current page, if possible
         for i in greatest(2, current_page - 1)..least(total_pages - 1, current_page + 1) loop
-            pagination_links := pagination_links || format('<a href="/admin?list=%s&page=%s">%s</a> ', list, i, i);
+            pagination_links := pagination_links || format('<a class="hover:text-blue-500" href="" hx-get="/sheet?list=%s&page_no=%s" hx-target="#%s" hx-swap="outerHTML" hx-headers=''{"Accept": "text/html"}''>%s</a> ', list, i, list, i);
         end loop;
 
         if current_page < total_pages - 1 then
@@ -140,15 +138,16 @@ begin
         end if;
 
         -- Always link to the last page
-        pagination_links := pagination_links || format('<a href="/admin?list=%s&page=%s">of %s</a>', list, total_pages, total_pages);
+        pagination_links := pagination_links || format('of <a class="hover:text-blue-500" href="" hx-get="/sheet?list=%s&page_no=%s" hx-target="#%s" hx-swap="outerHTML" hx-headers=''{"Accept": "text/html"}''>%s</a>', list, total_pages, list, total_pages);
     end if;
 
     return format($html$
-      <td colspan="100%%" class="px-6 py-4 whitespace-nowrap font-medium">%s</td>
+      <td colspan="100%%" class="px-4 py-2 whitespace-nowrap font-medium">%s</td>
     $html$, pagination_links);
 end;
 $$ language plpgsql;
 
 grant execute on function api.admin(text, integer) to web_anon, web_user;
+grant execute on function api.sheet(text, integer) to web_anon, web_user;
 grant execute on function api.table_rows_sql(text, text, text, integer, integer) to web_anon, web_user;
 grant execute on function api.pagination(text, integer, integer) to web_anon, web_user;

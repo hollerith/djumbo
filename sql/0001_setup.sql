@@ -118,14 +118,13 @@ declare
     user_record json;
 begin
     -- Get the session_token from the cookies
-    select current_setting('request.cookies', true)::json->>'session_token'
-        into session_token;
+    select current_setting('request.cookies', true)::json->>'session_token' into session_token;
 
     -- Directly join auth.sessions with auth.users and select the user record into JSON
     select row_to_json(u) into user_record
-    from auth.sessions s
-    join auth.users u on s.user_id = u.user_id
-    where s.token = session_token and s.expires > current_timestamp;
+      from auth.sessions s
+      join auth.users u on s.user_id = u.user_id
+     where s.token = session_token and s.expires > current_timestamp;
 
     -- If a user record is found, set the local role to web_user and configure the user ID
     if user_record is not null then

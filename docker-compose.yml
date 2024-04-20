@@ -9,6 +9,8 @@ services:
       - ./sql:/docker-entrypoint-initdb.d
     environment:
       POSTGRES_PASSWORD: mysecretpassword
+      POSTGRES_LOG_STATEMENT: 'all'
+      POSTGRES_LOG_MIN_DURATION_STATEMENT: '0'
     ports:
       - "5433:5432"
 

@@ -51,7 +51,7 @@ begin
     page_offset := (page_no - 1) * page_size;
 
     -- Generate dynamic SQL using the helper function
-    dynamic_sql := api.table_rows_sql('<tr>', '<td class="border border-gray-200 px-4 py-2 text-left">', list, page_size, page_offset);
+    dynamic_sql := api.table_rows_sql('border border-gray-200 px-4 py-2 text-left', list, page_size, page_offset);
 
     -- Execute the dynamic SQL and fetch each row
     for row_html in execute dynamic_sql
@@ -77,8 +77,8 @@ begin
 end;
 $$ language plpgsql;
 
--- drop function api.table_rows_sql(text, text, text, int4, int4);
-create or replace function api.table_rows_sql(row_tag text, col_tag text, tablename text, page_size integer, page_offset integer) returns text as $$
+-- drop function api.table_rows_sql(text, text, int4, int4);
+create or replace function api.table_rows_sql(col_cls text, tablename text, page_size integer, page_offset integer) returns text as $$
 declare
     column_sql text := '';
     dynamic_sql text;
@@ -92,14 +92,14 @@ begin
 
     -- Construct the SQL part for column data wrapped in col_tag, handling NULL values
     select into column_sql
-           string_agg(format('''%s'' || coalesce(%I::text, '''') || ''%s''', col_tag, column_name, '</td>'), ' || ')
+           string_agg(format('''<td class="%s">'' || coalesce(%I::text, '''') || ''%s''', col_cls, column_name, '</td>'), ' || ')
       from information_schema.columns
      where table_schema = 'api' and table_name = tablename;
 
     if primary_key_column is null then
-        dynamic_sql := format('SELECT ''<tr id="pk-'' || row_number() over () || ''">'' || %s || ''</tr>'' FROM api.%I LIMIT %L OFFSET %L', column_sql, tablename, page_size, page_offset);
+        dynamic_sql := format('SELECT ''<tr id="%s-'' || row_number() over () || ''">'' || %s || ''</tr>'' FROM api.%I LIMIT %L OFFSET %L', tablename, column_sql, tablename, page_size, page_offset);
     else
-        dynamic_sql := format('SELECT ''<tr id="'' || %I || ''">'' || %s || ''</tr>'' FROM api.%I LIMIT %L OFFSET %L', primary_key_column, column_sql, tablename, page_size, page_offset);
+        dynamic_sql := format('SELECT ''<tr id="%s-'' || %I || ''">'' || %s || ''</tr>'' FROM api.%I LIMIT %L OFFSET %L', tablename, primary_key_column, column_sql, tablename, page_size, page_offset);
     end if;
 
     return dynamic_sql;
@@ -113,41 +113,52 @@ declare
     pagination_links text := '';
     i integer;
 begin
-    if total_pages <= 5 then
+    if current_page < 6 then
         pagination_links := 'Page ';
-        for i in 1..total_pages loop
-            pagination_links := pagination_links || format('<a class="hover:text-blue-500" href="" hx-get="/sheet?list=%s&page_no=%s" hx-target="#%s" hx-swap="outerHTML" hx-headers=''{"Accept": "text/html"}''>%s</a>', list, i, list, i);
-            if i < total_pages then
-                pagination_links := pagination_links || ', ';
+        for i in 1..least(6, total_pages) loop
+            if i = current_page then
+                pagination_links := pagination_links || format('<a class="font-medium text-primary">%s</a>', i);
+            else
+                pagination_links := pagination_links || format('<a class="hover:text-accent" href="" hx-get="/sheet?list=%s&page_no=%s" hx-target="#%s" hx-swap="outerHTML" hx-headers=''{"Accept": "text/html"}''>%s</a>', list, i, list, i);
             end if;
+
+            pagination_links := pagination_links || ' ';
         end loop;
     else
         -- Always link to the first page
-        pagination_links := format('Page <a class="hover:text-blue-500" href="" hx-get="/sheet?list=%s&page=1" hx-target="#%s" hx-swap="outerHTML" hx-headers=''{"Accept": "text/html"}''>1</a> ', list, list);
+        pagination_links := format('Page <a class="hover:text-accent" href="" hx-get="/sheet?list=%s&page_no=1" hx-target="#%s" hx-swap="outerHTML" hx-headers=''{"Accept": "text/html"}''>1</a> ', list, list);
         if current_page > 2 then
             pagination_links := pagination_links || '... ';
         end if;
 
         -- Show one page before and after the current page, if possible
         for i in greatest(2, current_page - 1)..least(total_pages - 1, current_page + 1) loop
-            pagination_links := pagination_links || format('<a class="hover:text-blue-500" href="" hx-get="/sheet?list=%s&page_no=%s" hx-target="#%s" hx-swap="outerHTML" hx-headers=''{"Accept": "text/html"}''>%s</a> ', list, i, list, i);
+            if i = current_page then
+                pagination_links := pagination_links || format('<a class="font-medium text-primary">%s</a> ', i);
+            else
+                pagination_links := pagination_links || format('<a class="hover:text-accent" href="" hx-get="/sheet?list=%s&page_no=%s" hx-target="#%s" hx-swap="outerHTML" hx-headers=''{"Accept": "text/html"}''>%s</a> ', list, i, list, i);
+            end if;
         end loop;
 
         if current_page < total_pages - 1 then
             pagination_links := pagination_links || '... ';
         end if;
 
-        -- Always link to the last page
-        pagination_links := pagination_links || format('of <a class="hover:text-blue-500" href="" hx-get="/sheet?list=%s&page_no=%s" hx-target="#%s" hx-swap="outerHTML" hx-headers=''{"Accept": "text/html"}''>%s</a>', list, total_pages, list, total_pages);
     end if;
 
-    return format($html$
-      <td colspan="100%%" class="px-4 py-2 whitespace-nowrap font-medium">%s</td>
-    $html$, pagination_links);
+    -- Always link to the last page
+    if current_page = total_pages then
+        pagination_links := pagination_links || format('of <a class="font-medium text-primary" href="" hx-get="/sheet?list=%s&page_no=%s" hx-target="#%s" hx-swap="outerHTML" hx-headers=''{"Accept": "text/html"}''>%s</a>', list, total_pages, list, total_pages);
+    else
+        pagination_links := pagination_links || format('of <a class="hover:text-accent" href="" hx-get="/sheet?list=%s&page_no=%s" hx-target="#%s" hx-swap="outerHTML" hx-headers=''{"Accept": "text/html"}''>%s</a>', list, total_pages, list, total_pages);
+    end if;
+
+    -- 100%% escapes % with %
+    return format('<td id="%s-pages" colspan="100%%" class="px-4 py-2 whitespace-nowrap">%s</td>', list, pagination_links);
 end;
 $$ language plpgsql;
 
 grant execute on function api.admin(text, integer) to web_anon, web_user;
 grant execute on function api.sheet(text, integer) to web_anon, web_user;
-grant execute on function api.table_rows_sql(text, text, text, integer, integer) to web_anon, web_user;
+grant execute on function api.table_rows_sql(text, text, integer, integer) to web_anon, web_user;
 grant execute on function api.pagination(text, integer, integer) to web_anon, web_user;

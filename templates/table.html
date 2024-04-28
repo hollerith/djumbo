@@ -1,0 +1,15 @@
+<!-- Main content area -->
+<div id='{{ id }}' class="mb-8">
+    <h2 class="text-xl font-semibold mb-4">{{ title }}</h2>
+    <table class="min-w-full table-auto border-collapse border border-gray-200">
+        <thead class="bg-gray-200">
+            <tr>{{ thead | safe }}</tr>
+        </thead>
+        <tbody>
+            {{ tbody | safe }}
+        </tbody>
+        <tfoot>
+            <tr>{{ tfoot | safe }}</tr>
+        </tfoot>
+    </table>
+</div>

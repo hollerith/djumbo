@@ -66,7 +66,7 @@ begin
 
     context := json_build_object(
         'title', 'jinja2 djumbo',
-        'headline', 'Welcome to Djumbo 0.02',
+        'headline', 'Welcome to Djumbo 0.10',
         'login', login
     );
 
@@ -130,7 +130,7 @@ begin
     -- Gather selected user tables information, excluding n_tup* columns
     select json_agg(row_to_json(t)) into user_tables
     from (
-        select schemaname, relname, seq_scan, idx_scan, idx_tup_fetch, last_vacuum, last_autovacuum, last_analyze, last_autoanalyze
+        select schemaname, relname, seq_scan, idx_scan, idx_tup_fetch, last_autovacuum, last_autoanalyze
         from pg_stat_user_tables
     ) t;
 
@@ -292,4 +292,3 @@ grant execute on function api.welcome() to web_user;
 grant execute on function api.about() to web_anon, web_user;
 grant execute on function api.link(text) to web_anon, web_user;
 grant execute on function api.debug() to web_user;
-

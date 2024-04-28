@@ -1,0 +1,267 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="p-8 w-full">
+    <h1 class="text-2xl font-bold mb-6">Campaign Dashboard</h1>
+
+    <div class="flex">
+        <!-- Information Panel -->
+        <div class="w-1/2 mr-4">
+            <div class="mb-8">
+                <h2 class="text-xl font-semibold mb-4">General Information</h2>
+                <ul class="list-disc pl-8">
+                    <li>Current User: <span class="font-medium">{{ current_user }}</span></li>
+                    <li>Current Database: <span class="font-medium">{{ current_database }}</span></li>
+                    <li>Current Schema: <span class="font-medium">{{ current_schema }}</span></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="w-1/2">
+            <div class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-8">
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="plot-option">
+                        Select Plot Option
+                    </label>
+                    <select class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="plot-option">
+                        <option value="">Select an option</option>
+                        <optgroup label="By Country">
+                            <option value="population">Population size</option>
+                            <option value="borders">Number of borders</option>
+                            <option value="timezones">Number of timezones</option>
+                            <option value="languages">Number of languages</option>
+                        </optgroup>
+                        <optgroup label="By Region">
+                            <option value="regionCountries">Number of countries in the region</option>
+                            <option value="regionTimezones">Number of unique timezones in the region</option>
+                        </optgroup>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mb-8">
+
+        {{ table_html | safe }}
+
+    </div>
+
+    <div class="mb-8 flex">
+        <div id="data-chart-container" class="w-2/3 p-4"></div>
+        <div id="data-table-container" class="w-1/3 p-4"></div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const plotOptionSelect = document.getElementById('plot-option');
+
+        plotOptionSelect.addEventListener('change', function() {
+            const dataUrl = 'https://restcountries.com/v2/all';
+
+            fetch(dataUrl)
+                .then(response => response.text())
+                .then(text => JSON.parse(text))
+                .then(data => {
+                    const tableContainer = document.getElementById('data-table-container');
+                    tableContainer.innerHTML = '';
+
+                    const chartContainer = document.getElementById('data-chart-container');
+                    chartContainer.innerHTML = '';
+
+                    const table = document.createElement('table');
+                    table.className = 'table-auto w-full';
+                    tableContainer.appendChild(table);
+
+                    const canvas = document.createElement('canvas');
+                    chartContainer.appendChild(canvas);
+                    const ctx = canvas.getContext('2d');
+
+                    let regionCountriesData, regionTimezonesData;
+
+                    switch (this.value) {
+                        case 'population':
+                            buildTable(data, 'population', table);
+                            buildChart(data, 'population', ctx);
+                            break;
+                        case 'borders':
+                            buildTable(data, 'borders', table);
+                            buildChart(data, 'borders', ctx);
+                            break;
+                        case 'timezones':
+                            buildTable(data, 'timezones', table);
+                            buildChart(data, 'timezones', ctx);
+                            break;
+                        case 'languages':
+                            buildTable(data, 'languages', table);
+                            buildChart(data, 'languages', ctx);
+                            break;
+                        case 'regionCountries':
+                            regionCountriesData = aggregateDataByRegion(data, 'regionCountries');
+                            buildTable(regionCountriesData, 'count', table);
+                            buildChart(regionCountriesData, 'count', ctx);
+                            break;
+                        case 'regionTimezones':
+                            regionTimezonesData = aggregateDataByRegion(data, 'regionTimezones');
+                            buildTable(regionTimezonesData, 'count', table);
+                            buildChart(regionTimezonesData, 'count', ctx);
+                            break;
+                        default:
+                            console.log('Invalid selection');
+                            break;
+                    }
+                })
+                .catch(error => console.error('Error fetching data:', error));
+        });
+    });
+
+    function buildChart(data, metric, ctx) {
+        const values = data.map(country => {
+            if (Array.isArray(country[metric])) {
+                return country[metric].length;
+            } else if (typeof country[metric] === 'string' && country[metric].includes(',')) {
+                return country[metric].split(',').length;
+            }
+            return country[metric] || 0;
+        });
+
+        const maxValue = Math.max(...values);
+
+        const chartData = data.map((country, index) => {
+            let value = country[metric];
+            if (typeof value === 'string' && value.includes(',')) {
+                value = value.split(',').length;
+            } else if (Array.isArray(value)) {
+                value = value.length;
+            } else if (value === undefined) {
+                value = 0;
+            }
+            let radius = 10;
+            if (typeof value === 'number') {
+                const normalizedValue = value / maxValue;
+                radius = 15 + 30 * normalizedValue;
+            }
+            return {
+                x: index * 10,
+                y: value,
+                r: radius,
+                name: country.name || country.region,
+                capital: country.capital
+            };
+        }).sort((a, b) => b.y - a.y).slice(0, 10);
+
+        new Chart(ctx, {
+            type: 'bubble',
+            data: {
+                datasets: [{
+                    label: metric.charAt(0).toUpperCase() + metric.slice(1),
+                    data: chartData,
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 10
+                        }
+                    },
+                    y: {
+                        beginAtZero: true
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const tooltipLabel = `${context.raw.name} (${context.raw.capital}) - ${context.raw.y}`;
+                                return tooltipLabel;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function buildTable(data, metric, table) {
+
+        const sortedData = data.map(country => {
+            let value = country[metric];
+            if (typeof value === 'string' && value.includes(',')) {
+                value = value.split(',').length;
+            } else if (Array.isArray(value)) {
+                value = value.length;
+            } else if (value === undefined) {
+                value = 0;
+            }
+            return { ...country, metricValue: value };
+        }).sort((a, b) => b.metricValue - a.metricValue).slice(0, 10);
+
+        const thead = document.createElement('thead');
+        thead.className = 'bg-gray-200';
+        const headerRow = document.createElement('tr');
+
+        const nameHeader = document.createElement('th');
+        nameHeader.textContent = 'Name';
+        nameHeader.className = 'px-4 py-2 text-left';
+
+        const metricHeader = document.createElement('th');
+        metricHeader.textContent = metric.charAt(0).toUpperCase() + metric.slice(1);
+        metricHeader.className = 'px-4 py-2';
+
+        headerRow.appendChild(nameHeader);
+        headerRow.appendChild(metricHeader);
+
+        thead.appendChild(headerRow);
+        table.appendChild(thead);
+
+        const tbody = document.createElement('tbody');
+        tbody.className = 'bg-white divide-y divide-gray-200';
+        sortedData.forEach(country => {
+            const row = document.createElement('tr');
+
+            const nameCell = document.createElement('td');
+            nameCell.textContent = country.name || country.region;
+            nameCell.className = 'px-4 py-2';
+
+            const metricCell = document.createElement('td');
+            metricCell.textContent = country.metricValue.toLocaleString();
+            metricCell.className = 'px-4 py-2 text-right';
+
+            row.appendChild(nameCell);
+            row.appendChild(metricCell);
+            tbody.appendChild(row);
+        });
+        table.appendChild(tbody);
+    }
+
+    function aggregateDataByRegion(data, metric) {
+        let aggregation = data.reduce((acc, country) => {
+            let region = country.region;
+            if (!acc[region]) {
+                acc[region] = { countries: new Set(), timezones: new Set() };
+            }
+            acc[region].countries.add(country.name);
+            country.timezones.forEach(tz => acc[region].timezones.add(tz));
+            return acc;
+        }, {});
+
+        return Object.keys(aggregation).map(region => {
+            return {
+                region: region,
+                count: metric === 'regionCountries' ? aggregation[region].countries.size : aggregation[region].timezones.size
+            };
+        });
+    }
+
+</script>
+{% endblock %}

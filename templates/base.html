@@ -32,16 +32,17 @@
                 </div>
                 <div class="w-full block flex-grow lg:flex lg:items-center lg:w-auto">
                     <div class="text-sm lg:flex-grow">
-                        <a href="/link?page_name=Test.md" class="block mt-4 lg:inline-block lg:mt-0 text-black hover:text-green-800 mr-4">Test</a>
-                        <a href="/admin?list=todos&page=1" class="block mt-4 lg:inline-block lg:mt-0 text-black hover:text-green-800 mr-4">Todo</a>
                         <a href="/about" class="block mt-4 lg:inline-block lg:mt-0 text-black hover:text-green-800 mr-4">About</a>
-
+                        <a href="/.well-known/webfinger?resource=acct:admin@uwu.mov" class="block mt-4 lg:inline-block lg:mt-0 text-black hover:text-green-800 mr-4">Whoami</a>
                         {% if login %}
+                            <a href="/latest" class="block mt-4 lg:inline-block lg:mt-0 text-black hover:text-green-800 mr-4">Cache</a>
+                            <a href="/link?page_name=Test.md" class="block mt-4 lg:inline-block lg:mt-0 text-black hover:text-green-800 mr-4">Test</a>
+                            <a href="/admin?list=todos&page=1" class="block mt-4 lg:inline-block lg:mt-0 text-black hover:text-green-800 mr-4">Todo</a>
+                            <a href="/admin?list=dork&page=5" class="block mt-4 lg:inline-block lg:mt-0 text-black hover:text-green-800 mr-4">Dorks</a>
                             <a href="/welcome" class="block mt-4 lg:inline-block lg:mt-0 text-black hover:text-green-800 mr-4">Welcome</a>
                             <a href="/debug" class="block mt-4 lg:inline-block lg:mt-0 text-black hover:text-green-800 mr-4">Debug</a>
                             <a href="/logout" hx-post="/logout" class="block mt-4 lg:inline-block lg:mt-0 text-black hover:text-green-800 mr-4">Logout</a>
                         {% else %}
-                            <a href="/register" class="block mt-4 lg:inline-block lg:mt-0 text-black hover:text-green-800 mr-4">Register</a>
                             <a href="/login" class="block mt-4 lg:inline-block lg:mt-0 text-black hover:text-green-800 mr-4">Login</a>
                         {% endif %}
                     </div>

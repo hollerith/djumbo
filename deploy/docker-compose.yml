@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: djumbo_postgres:latest
+    volumes:
+      - ./templates:/var/www/templates
+      - ./pages:/var/www/pages
+      - ./sql:/docker-entrypoint-initdb.d
+    environment:
+      POSTGRES_PASSWORD: mysecretpassword
+      POSTGRES_LOG_STATEMENT: 'all'
+      POSTGRES_LOG_MIN_DURATION_STATEMENT: '0'
+    ports:
+      - "5433:5432"
+
+  postgrest:
+    image: postgrest/postgrest
+    depends_on:
+      - postgres
+    environment:
+      PGRST_DB_URI: "postgres://postgres:mysecretpassword@postgres:5432/postgres"
+      PGRST_DB_SCHEMAS: "api"
+      PGRST_DB_ANON_ROLE: "web_anon"
+      PGRST_SERVER_PROXY_URI: "http://localhost:3000"
+      PGRST_COOKIE_DOMAIN: "localhost"
+      PGRST_LOG_LEVEL: "info"
+      PGRST_PRE_REQUEST: "auth.authenticate"
+
+  nginx:
+    image: nginx:latest
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./static:/var/www/static
+    ports:
+      - "8383:80"
+    depends_on:
+      - postgrest

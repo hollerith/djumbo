@@ -1,17 +1,29 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="flex flex-col md:justify-center">
-    <div class="max-w-lg mt-5 p-6">
-        <h5 class="mb-3 text-2xl font-bold tracking-tight">Edit Your Profile</h5>
+<div class="flex flex-col items-center justify-center min-h-screen bg-gray-100">
+    <div class="w-full max-w-lg p-6 bg-white shadow-md rounded">
+        <h5 class="text-2xl font-bold leading-tight text-gray-900 mb-6">Edit Your Profile</h5>
         <form hx-post="/profile" hx-target="#profileResponse" hx-trigger="submit">
-            <input type="text" name="username" placeholder="Username" value="{{ profile.username }}">
-            <input type="text" name="display_name" placeholder="Display Name" value="{{ profile.display_name }}">
-            <textarea name="bio" placeholder="Bio">{{ profile.bio }}</textarea>
-            <input type="text" name="image_url" placeholder="Image URL" value="{{ profile.image_url }}">
-            <input type="text" name="banner_url" placeholder="Banner URL" value="{{ profile.banner_url }}">
-            <input type="text" name="public_key" placeholder="Public Key" value="{{ profile.public_key }}">
-            <button type="submit">Update Profile</button>
+            <div class="mb-4">
+                <input class="w-full p-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500" type="text" name="username" placeholder="Username" value="{{ profile.username }}">
+            </div>
+            <div class="mb-4">
+                <input class="w-full p-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500" type="text" name="display_name" placeholder="Display Name" value="{{ profile.display_name }}">
+            </div>
+            <div class="mb-4">
+                <textarea class="w-full p-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500" name="bio" placeholder="Bio">{{ profile.bio }}</textarea>
+            </div>
+            <div class="mb-4">
+                <input class="w-full p-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500" type="text" name="image_url" placeholder="Image URL" value="{{ profile.image_url }}">
+            </div>
+            <div class="mb-4">
+                <input class="w-full p-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500" type="text" name="banner_url" placeholder="Banner URL" value="{{ profile.banner_url }}">
+            </div>
+            <div class="mb-6">
+                <input class="w-full p-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500" type="text" name="public_key" placeholder="Public Key" value="{{ profile.public_key }}">
+            </div>
+            <button class="w-full p-3 bg-blue-500 text-white rounded hover:bg-blue-600" type="submit">Update Profile</button>
         </form>
         <div id="profileResponse"></div>
     </div>

@@ -66,7 +66,7 @@ begin
 
     context := json_build_object(
         'title', 'jinja2 djumbo',
-        'headline', 'Welcome to Djumbo 0.10',
+        'headline', 'Welcome to Djumbo 0.11',
         'login', login
     );
 

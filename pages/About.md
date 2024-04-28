@@ -1,7 +1,7 @@
 # About Djumbo
 
-<div align="center">
-    <img src="static/djumbo_512.png" alt="Djumbo Logo" width="256">
+<div class="flex justify-center">
+    <img src="static/djumbo_512.png" alt="Djumbo Logo" class="w-64">
 </div>
 
 ## Description
@@ -18,4 +18,9 @@
 
 ## This site 😎
 
-This site is built with Djumbo. It's playground/test for what is possible. To make your own site fork this repository. We are running on the tiniest VPS. 🔥
+- This site is built with Djumbo.
+- It is a playground/test for what is possible.
+- To make your own site fork [this repository](https://github.com/hollerith/djumbo).
+- We are running on the tiniest VPS. 🔥
+
+

@@ -17,6 +17,9 @@ jobs:
       with:
         ssh-private-key: ${{ secrets.UWU_SECRET_KEY }}
 
+    - name: Add SSH key to known hosts
+      run: ssh-keyscan -H uwu.mov >> ~/.ssh/known_hosts
+
     - name: Rsync application files
       run: |
         rsync -av --exclude='.git*' --exclude='*.yml' --exclude='nginx.conf' ./ root@uwu.mov:/var/www

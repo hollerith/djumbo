@@ -15,3 +15,7 @@
 - **Security**: Built-in authentication and authorization mechanisms, including role-based access control.
 - **Performance**: Optimized for speed, with efficient data handling and minimal overhead.
 - **Ease of Use**: Simple setup and configuration, with a focus on developer productivity.
+
+## This site 😎
+
+This site is built with Djumbo. It's playground/test for what is possible. To make your own site fork this repository. We are running on the tiniest VPS. 🔥

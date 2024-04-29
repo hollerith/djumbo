@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="flex flex-col items-center justify-center min-h-screen">
+<div class="flex flex-col items-center justify-center">
     <div class="w-full max-w-lg p-6 bg-white shadow-md rounded">
         <h5 class="text-2xl font-bold leading-tight text-gray-900 mb-6">Edit Your Profile</h5>
         <form hx-post="/profile" hx-target="#profileResponse" hx-trigger="submit">

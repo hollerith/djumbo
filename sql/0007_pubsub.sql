@@ -79,19 +79,15 @@ begin
     select auth.authenticate() into login;
 
     select json_build_object(
-        'username', username,
-        'display_name', display_name,
-        'bio', bio,
-        'image_url', image_url,
-        'banner_url', banner_url,
-        'public_key', public_key
+        'username', p.username,
+        'display_name', p.display_name,
+        'bio', p.bio,
+        'image_url', p.image_url,
+        'banner_url', p.banner_url,
+        'public_key', p.public_key
     ) into user_profile
-    from api.profile
-    where user_id = login.user_id;
-
-    if not found then
-        raise exception 'Profile not found';
-    end if;
+    from api.profile p
+    where p.user_id = (login->>'user_id')::int;
 
     return api.render('profile.html', json_build_object(
         'title', 'Edit Profile',
@@ -118,7 +114,7 @@ begin
     select auth.authenticate() into login;
 
     insert into api.profile (user_id, username, display_name, bio, image_url, banner_url, public_key, updated_at)
-    values (login.user_id, lower(username), display_name, bio, image_url, banner_url, public_key, now())
+    values ((login->>'user_id')::int, lower(username), display_name, bio, image_url, banner_url, public_key, now())
     on conflict (user_id) do update
     set
         username = excluded.username,

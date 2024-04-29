@@ -31,6 +31,7 @@ create table api.profile (
     display_name text,
     bio text,
     image_url text,
+    banner_url text,
     public_key text,
     created_at timestamp without time zone default now(),
     updated_at timestamp without time zone default now()

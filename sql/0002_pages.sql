@@ -277,6 +277,29 @@ end;
 $$ language plpgsql;
 
 
+-- VALIDATE CSRF TOKENS
+create or replace function api.generate_csrf_token(session_id text, secret_key text, ttl int default 600)
+returns text language plpgsql as $$
+declare
+    timestamp int := (extract(epoch from now()))::int;
+    rounded_timestamp int := (timestamp // ttl) * ttl;
+    token_string text := session_id || secret_key || rounded_timestamp;
+begin
+    return encode(digest(token_string, 'sha256'), 'hex');
+end;
+$$;
+
+create or replace function api.validate_csrf_token(received_token text, session_id text, secret_key text, ttl int default 600)
+returns boolean language plpgsql as $$
+declare
+    expected_token text;
+begin
+    expected_token := api.generate_csrf_token(session_id, secret_key, ttl);
+    return expected_token = received_token;
+end;
+$$;
+
+
 -- Permissions
 grant execute on function api.render(text, json) to web_anon, web_user;
 grant execute on function api.markdown(text, json) to web_anon, web_user;

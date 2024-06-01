@@ -5,6 +5,7 @@
     <div class="w-full max-w-lg p-6 bg-white shadow-md rounded">
         <h5 class="text-2xl font-bold leading-tight text-gray-900 mb-6">Edit Your Profile</h5>
         <form hx-post="/profile" hx-target="#profileResponse" hx-trigger="submit">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <div class="mb-4">
                 <input class="w-full p-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500" type="text" name="username" placeholder="Username" value="{{ profile.username }}">
             </div>
@@ -25,7 +26,7 @@
             </div>
             <button class="w-full p-3 bg-blue-500 text-white rounded hover:bg-blue-600" type="submit">Update Profile</button>
         </form>
-        <div id="profileResponse"></div>
+        <div id="profileResponse">{{ headline }}</div>
     </div>
 </div>
 {% endblock %}

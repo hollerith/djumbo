@@ -43,4 +43,3 @@ begin
 end;
 $$ language plpgsql;
 
-select * from check_exec('web_anon', 'api', 'welcome');

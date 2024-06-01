@@ -100,6 +100,7 @@ $$ language plpgsql;
 
 -- POST profile
 create or replace function api.account(
+    received_token text,
     username text,
     display_name text,
     bio text,
@@ -111,7 +112,12 @@ returns text language plpgsql as $$
 declare
     login json;
 begin
+
     select auth.authenticate() into login;
+
+    if not api.validate_csrf_token(received_token, session_id, secret_key) then
+        raise exception 'Invalid CSRF token';
+    end if;
 
     insert into api.profile (user_id, username, display_name, bio, image_url, banner_url, public_key, updated_at)
     values ((login->>'user_id')::int, lower(username), display_name, bio, image_url, banner_url, public_key, now())
